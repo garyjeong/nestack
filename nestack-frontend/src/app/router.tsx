@@ -1,8 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { useAppStore } from './store';
 
 // Lazy load pages for code splitting
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense } from 'react';
 
 // Auth Pages
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -29,8 +28,26 @@ const ProfileEditPage = lazy(() => import('@/pages/mypage/ProfileEditPage'));
 const BadgesPage = lazy(() => import('@/pages/mypage/BadgesPage'));
 const SettingsPage = lazy(() => import('@/pages/mypage/SettingsPage'));
 
+// Family Pages
+const FamilySettingsPage = lazy(() => import('@/pages/family/FamilySettingsPage'));
 
+// Loading component for Suspense
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-stone-50">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+    </div>
+  );
+}
 
+// Helper function to wrap lazy components with Suspense
+function withSuspense(Component: React.LazyExoticComponent<() => React.JSX.Element>) {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Component />
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter([
   { path: '/login', element: withSuspense(LoginPage) },

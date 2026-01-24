@@ -1,11 +1,8 @@
 import { Link } from 'react-router-dom'
-import { RefreshCw, Plus, TrendingUp, TrendingDown, Wallet } from 'lucide-react'
-import { AppShell } from '@/shared/components/layout/AppShell'
-import { Button } from '@/shared/components/ui/Button'
+import { RefreshCw, Plus, TrendingUp, TrendingDown, Wallet, ChevronRight, Building2, CreditCard, PiggyBank } from 'lucide-react'
+import { AppShell, Page } from '@/shared/components/layout'
 import { Card } from '@/shared/components/ui/Card'
-import { Skeleton } from '@/shared/components/feedback'
-import { AccountList } from '@/features/finance/components'
-import { TransactionItem } from '@/features/finance/components'
+import { CurrencyDisplay } from '@/shared/components/ui/CountUpNumber'
 import {
   useAccounts,
   useTransactions,
@@ -14,6 +11,12 @@ import {
   useOpenBankingAuth,
   useOpenBankingConnection,
 } from '@/features/finance/hooks'
+import { cn } from '@/shared/utils/cn'
+
+// 은행 아이콘 매핑 (간소화)
+const bankIcons: Record<string, React.ReactNode> = {
+  default: <Building2 className="h-5 w-5" />,
+}
 
 export default function FinancePage() {
   const { accounts, isLoading: isAccountsLoading } = useAccounts()
@@ -23,138 +26,297 @@ export default function FinancePage() {
   const { syncAllAccounts, isLoading: isSyncing } = useSyncAllAccounts()
   const { startAuth, isLoading: isAuthLoading } = useOpenBankingAuth()
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount)
-  }
-
   const handleConnectBank = () => {
     startAuth()
   }
 
+  // 저축률 계산
+  const savingsRate = summary
+    ? Math.round(((summary.monthlyIncome - summary.monthlyExpense) / summary.monthlyIncome) * 100) || 0
+    : 0
+
   return (
     <AppShell>
-      {/* Header */}
-      <header className="bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      {/* 모바일 헤더 */}
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3 lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between">
           <h1 className="text-xl font-bold text-stone-900">가계부</h1>
           {accounts.length > 0 && (
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
               onClick={() => syncAllAccounts()}
-              isLoading={isSyncing}
+              disabled={isSyncing}
+              className="p-2 -mr-2 rounded-xl hover:bg-stone-100 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className="h-5 w-5" />
-            </Button>
+              <RefreshCw className={cn('h-5 w-5 text-stone-600', isSyncing && 'animate-spin')} />
+            </button>
           )}
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
-        {/* Summary Card */}
-        {isSummaryLoading ? (
-          <Skeleton className="h-40 w-full rounded-xl" />
-        ) : summary ? (
-          <Card className="overflow-hidden">
-            <div className="bg-gradient-to-br from-primary-500 to-primary-600 p-6 text-white">
-              <div className="flex items-center gap-2 mb-1">
-                <Wallet className="h-5 w-5 opacity-80" />
-                <span className="text-sm opacity-80">총 자산</span>
-              </div>
-              <p className="text-3xl font-bold">{formatAmount(summary.totalBalance)}원</p>
-            </div>
-            <div className="p-4 grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-xs text-stone-500 mb-1">연결 계좌</p>
-                <p className="font-bold text-stone-900">{summary.connectedAccounts}개</p>
-              </div>
-              <div>
-                <div className="flex items-center justify-center gap-1 text-xs text-stone-500 mb-1">
-                  <TrendingUp className="h-3 w-3 text-green-500" />
-                  <span>수입</span>
-                </div>
-                <p className="font-bold text-green-600">+{formatAmount(summary.monthlyIncome)}</p>
-              </div>
-              <div>
-                <div className="flex items-center justify-center gap-1 text-xs text-stone-500 mb-1">
-                  <TrendingDown className="h-3 w-3 text-red-500" />
-                  <span>지출</span>
-                </div>
-                <p className="font-bold text-red-600">-{formatAmount(summary.monthlyExpense)}</p>
-              </div>
-            </div>
-          </Card>
-        ) : null}
-
-        {/* Accounts Section */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-stone-900">연결된 계좌</h2>
+      <Page className="pb-24 lg:pb-8">
+        {/* 데스크탑 헤더 */}
+        <div className="hidden lg:flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-stone-900">가계부</h1>
+            <p className="text-stone-500 text-sm mt-1">계좌와 거래를 한눈에 관리해요</p>
+          </div>
+          <div className="flex gap-3">
             {accounts.length > 0 && (
-              <span className="text-sm text-stone-500">{accounts.length}개</span>
+              <button
+                onClick={() => syncAllAccounts()}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-2 h-11 px-4 rounded-xl border border-stone-200 text-stone-700 font-medium hover:bg-stone-50 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
+                동기화
+              </button>
+            )}
+            {!isConnected && (
+              <button
+                onClick={handleConnectBank}
+                disabled={isAuthLoading}
+                className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                계좌 연결
+              </button>
             )}
           </div>
+        </div>
 
-          <AccountList
-            accounts={accounts}
-            isLoading={isAccountsLoading}
-            emptyMessage="아직 연결된 계좌가 없습니다. 오픈뱅킹으로 계좌를 연결해보세요."
-          />
-
-          {!isConnected && !isAccountsLoading && (
-            <Button
-              variant="outline"
-              className="mt-4 w-full border-2 border-dashed"
-              onClick={handleConnectBank}
-              isLoading={isAuthLoading}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              오픈뱅킹 계좌 연결하기
-            </Button>
-          )}
-        </section>
-
-        {/* Recent Transactions Section */}
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-stone-900">최근 거래</h2>
-            <Link to="/finance/transactions" className="text-sm text-primary-600">
-              전체보기
-            </Link>
-          </div>
-
-          {isTransactionsLoading ? (
-            <Card className="p-4">
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1">
-                      <Skeleton className="h-5 w-32 mb-1" />
-                      <Skeleton className="h-4 w-20" />
-                    </div>
-                    <Skeleton className="h-5 w-24" />
-                  </div>
-                ))}
+        {/* 총 자산 카드 */}
+        <section className="mb-6">
+          {isSummaryLoading ? (
+            <Card className="p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-4 w-20 bg-stone-200 rounded" />
+                <div className="h-10 w-40 bg-stone-200 rounded" />
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="h-12 bg-stone-100 rounded-xl" />
+                  <div className="h-12 bg-stone-100 rounded-xl" />
+                  <div className="h-12 bg-stone-100 rounded-xl" />
+                </div>
               </div>
             </Card>
-          ) : transactions.length > 0 ? (
-            <Card className="divide-y divide-stone-100">
-              {transactions.map((transaction) => (
-                <TransactionItem
-                  key={transaction.id}
-                  transaction={transaction}
-                  showAccount
-                />
-              ))}
+          ) : summary ? (
+            <Card variant="gradient" className="p-6 relative overflow-hidden">
+              {/* 배경 데코 */}
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/4" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
+
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="h-5 w-5 text-white/80" />
+                  <span className="text-sm text-white/80">총 자산</span>
+                </div>
+                <p className="text-3xl font-bold text-white mb-4">
+                  <CurrencyDisplay value={summary.totalBalance} duration={800} />
+                </p>
+
+                {/* 수입/지출 요약 */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-white/15 rounded-xl p-3 text-center">
+                    <p className="text-xs text-white/70 mb-1">연결 계좌</p>
+                    <p className="font-bold text-white">{summary.connectedAccounts}개</p>
+                  </div>
+                  <div className="bg-white/15 rounded-xl p-3 text-center">
+                    <p className="text-xs text-white/70 mb-1 flex items-center justify-center gap-1">
+                      <TrendingUp className="h-3 w-3" /> 수입
+                    </p>
+                    <p className="font-bold text-white text-sm">
+                      +<CurrencyDisplay value={summary.monthlyIncome} duration={600} />
+                    </p>
+                  </div>
+                  <div className="bg-white/15 rounded-xl p-3 text-center">
+                    <p className="text-xs text-white/70 mb-1 flex items-center justify-center gap-1">
+                      <TrendingDown className="h-3 w-3" /> 지출
+                    </p>
+                    <p className="font-bold text-white text-sm">
+                      -<CurrencyDisplay value={summary.monthlyExpense} duration={600} />
+                    </p>
+                  </div>
+                </div>
+
+                {/* 저축률 표시 */}
+                {savingsRate > 0 && (
+                  <div className="mt-4 flex items-center gap-2">
+                    <PiggyBank className="h-4 w-4 text-white/70" />
+                    <span className="text-sm text-white/70">
+                      이번 달 저축률 <span className="font-bold text-white">{savingsRate}%</span>
+                    </span>
+                  </div>
+                )}
+              </div>
             </Card>
-          ) : (
-            <Card className="p-8 text-center">
-              <p className="text-stone-500">거래 내역이 없습니다</p>
-            </Card>
-          )}
+          ) : null}
         </section>
-      </main>
+
+        {/* 2열 레이아웃 */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* 연결된 계좌 */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-stone-900">연결된 계좌</h2>
+              {accounts.length > 0 && (
+                <span className="text-sm text-stone-500">{accounts.length}개</span>
+              )}
+            </div>
+
+            {isAccountsLoading ? (
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="p-4">
+                    <div className="animate-pulse flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-stone-200" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-24 bg-stone-200 rounded" />
+                        <div className="h-3 w-32 bg-stone-100 rounded" />
+                      </div>
+                      <div className="h-5 w-20 bg-stone-200 rounded" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : accounts.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-100">
+                  <CreditCard className="h-8 w-8 text-stone-400" />
+                </div>
+                <p className="text-stone-900 font-medium mb-1">연결된 계좌가 없어요</p>
+                <p className="text-stone-500 text-sm mb-4">
+                  오픈뱅킹으로 계좌를 연결해보세요
+                </p>
+                {!isConnected && (
+                  <button
+                    onClick={handleConnectBank}
+                    disabled={isAuthLoading}
+                    className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    계좌 연결하기
+                  </button>
+                )}
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {accounts.map((account) => (
+                  <Card key={account.id} interactive className="p-4">
+                    <div className="flex items-center gap-3">
+                      {/* 은행 아이콘 */}
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100">
+                        <span className="text-stone-600">
+                          {bankIcons.default}
+                        </span>
+                      </div>
+
+                      {/* 계좌 정보 */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-stone-900">{account.bankName}</p>
+                        <p className="text-sm text-stone-500 truncate">{account.accountNumber}</p>
+                      </div>
+
+                      {/* 잔액 */}
+                      <p className="font-bold text-stone-900 tabular-nums">
+                        <CurrencyDisplay value={account.balance} duration={400} />
+                      </p>
+                    </div>
+                  </Card>
+                ))}
+
+                {/* 계좌 추가 */}
+                {!isConnected && (
+                  <button
+                    onClick={handleConnectBank}
+                    disabled={isAuthLoading}
+                    className="w-full p-4 rounded-2xl border-2 border-dashed border-stone-200 text-stone-500 hover:border-primary-300 hover:text-primary-600 hover:bg-primary-50/50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span className="font-medium">계좌 추가</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* 최근 거래 */}
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-stone-900">최근 거래</h2>
+              <Link
+                to="/finance/transactions"
+                className="flex items-center gap-0.5 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+              >
+                전체보기 <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {isTransactionsLoading ? (
+              <Card className="divide-y divide-stone-100">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-4">
+                    <div className="h-10 w-10 rounded-xl bg-stone-200 animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-24 bg-stone-200 rounded animate-pulse" />
+                      <div className="h-3 w-16 bg-stone-100 rounded animate-pulse" />
+                    </div>
+                    <div className="h-4 w-20 bg-stone-200 rounded animate-pulse" />
+                  </div>
+                ))}
+              </Card>
+            ) : transactions.length === 0 ? (
+              <Card className="p-8 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100">
+                  <Wallet className="h-7 w-7 text-stone-400" />
+                </div>
+                <p className="text-stone-500">거래 내역이 없어요</p>
+              </Card>
+            ) : (
+              <Card className="divide-y divide-stone-100">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center gap-3 p-4">
+                    {/* 아이콘 */}
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-xl',
+                        tx.transactionType === 'deposit'
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-stone-100 text-stone-600'
+                      )}
+                    >
+                      {tx.transactionType === 'deposit' ? (
+                        <TrendingUp className="h-5 w-5" />
+                      ) : (
+                        <TrendingDown className="h-5 w-5" />
+                      )}
+                    </div>
+
+                    {/* 설명 */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-stone-900 truncate">
+                        {tx.description}
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        {tx.bankAccount?.bankName}
+                      </p>
+                    </div>
+
+                    {/* 금액 */}
+                    <span
+                      className={cn(
+                        'font-semibold tabular-nums text-sm',
+                        tx.transactionType === 'deposit' ? 'text-green-600' : 'text-stone-900'
+                      )}
+                    >
+                      {tx.transactionType === 'deposit' ? '+' : '-'}
+                      {new Intl.NumberFormat('ko-KR').format(tx.amount)}원
+                    </span>
+                  </div>
+                ))}
+              </Card>
+            )}
+          </section>
+        </div>
+      </Page>
     </AppShell>
   )
 }

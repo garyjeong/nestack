@@ -1,5 +1,15 @@
 import type { User } from '@/features/auth/types'
 
+// Family Member type
+export interface FamilyMember {
+  id: string
+  userId: string
+  familyGroupId: string
+  role: 'owner' | 'member'
+  joinedAt: string
+  user: Pick<User, 'id' | 'name' | 'email' | 'profileImage'>
+}
+
 // Family Group types
 export interface FamilyGroup {
   id: string
@@ -9,15 +19,6 @@ export interface FamilyGroup {
   members: FamilyMember[]
   createdAt: string
   updatedAt: string
-}
-
-export interface FamilyMember {
-  id: string
-  userId: string
-  familyGroupId: string
-  role: 'owner' | 'member'
-  joinedAt: string
-  user: Pick<User, 'id' | 'name' | 'email' | 'profileImage'>
 }
 
 // Invite Code types
@@ -62,6 +63,34 @@ export interface FamilyInfoResponse {
 // Share settings
 export type ShareStatus = 'full' | 'balance_only' | 'private'
 
-export interface UpdateShareSettingsRequest {
+export interface AccountShareSetting {
+  accountId: string
+  bankName: string
+  accountNumberMasked: string
+  balance: number
   shareStatus: ShareStatus
+  isHidden: boolean
+}
+
+export interface UpdateShareSettingsRequest {
+  accounts: Array<{
+    accountId: string
+    shareStatus: ShareStatus
+  }>
+}
+
+export interface ShareSettingsResponse {
+  familyGroup: FamilyGroup | null
+  inviteCode: InviteCode | null
+  accounts: AccountShareSetting[]
+}
+
+export interface ValidateInviteCodeResponse {
+  valid: boolean
+  familyGroup: Pick<FamilyGroup, 'id' | 'name'> | null
+}
+
+export interface LeaveFamilyRequest {
+  password: string
+  keepMissions: 'keep' | 'delete'
 }

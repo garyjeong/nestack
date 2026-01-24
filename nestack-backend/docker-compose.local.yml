@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: nestack-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: nestack_db
+      POSTGRES_USER: nestack
+      POSTGRES_PASSWORD: nestack_password
+      TZ: Asia/Seoul
+    volumes:
+      - nestack_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nestack -d nestack_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  nestack_postgres_data:
+    driver: local

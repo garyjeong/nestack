@@ -108,7 +108,7 @@ export default function LeaveFamilyModal() {
                   name="missionOption"
                   value="keep"
                   checked={keepMissions === 'keep'}
-                  onChange={(e) => setKeepMissions('keep')}
+                  onChange={() => setKeepMissions('keep')}
                   className="mr-2 accent-primary-500"
                 />
                 <span className="text-sm font-medium text-stone-700">
@@ -121,7 +121,7 @@ export default function LeaveFamilyModal() {
                   name="missionOption"
                   value="delete"
                   checked={keepMissions === 'delete'}
-                  onChange={(e) => setKeepMissions('delete')}
+                  onChange={() => setKeepMissions('delete')}
                   className="mr-2 accent-primary-500"
                 />
                 <span className="text-sm font-medium text-stone-700">

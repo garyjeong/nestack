@@ -1,21 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiClient } from '@/api/client';
 import { showToast } from '@/shared/components/feedback/Toast';
 import { Button } from '@/shared/components/ui/Button';
-import { AlertTriangle, AlertCircle, X } from 'lucide-react';
+import { AlertTriangle, AlertCircle, X, Shield, ChevronRight } from 'lucide-react';
 import { Input } from '@/shared/components/ui/Input';
 
-interface ShareAccount {
-  accountId: string;
+type ShareStatusType = 'FULL' | 'BALANCE_ONLY' | 'PRIVATE';
+
+interface Account {
+  id: string;
   bankName: string;
   accountNumberMasked: string;
   balance: number;
-  shareStatus: 'FULL' | 'BALANCE_ONLY' | 'PRIVATE';
+  shareStatus: ShareStatusType;
   isHidden: boolean;
 }
-
-type ShareStatusType = 'FULL' | 'BALANCE_ONLY' | 'PRIVATE';
 
 export default function FamilySettingsPage() {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export default function FamilySettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<{ [accountId: string]: ShareStatusType }>({});
 
-  const { data: accounts = [], isLoading: isLoadingAccounts } = useQuery({
+  const { data: accounts = [], isLoading: isLoadingAccounts } = useQuery<Account[]>({
     queryKey: ['family', 'share-settings'],
     queryFn: async () => {
       const response = await apiClient.get('/family/share-settings');
@@ -34,7 +35,7 @@ export default function FamilySettingsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: { accounts: { accountId: string; shareStatus: ShareStatusType }[] }) => {
       const response = await apiClient.patch('/family/share-settings', { accounts: data });
       return response.data;
     },
@@ -42,7 +43,7 @@ export default function FamilySettingsPage() {
       showToast.success('공유 설정이 변경되었습니다.');
       setPendingChanges({});
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { error?: { message?: string } } } }) => {
       showToast.error(error.response?.data?.error?.message || '공유 설정 변경에 실패했습니다.');
     },
   });
@@ -57,7 +58,7 @@ export default function FamilySettingsPage() {
   const handleSave = () => {
     const updates: { accountId: string; shareStatus: ShareStatusType }[] = [];
     
-    accounts.forEach((account) => {
+    accounts.forEach((account: Account) => {
       const pendingStatus = pendingChanges[account.id];
       if (pendingStatus && pendingStatus !== account.shareStatus) {
         updates.push({
@@ -81,13 +82,14 @@ export default function FamilySettingsPage() {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.delete('/family/leave', { data: { password, keepMissions } });
+      await apiClient.delete('/family/leave', { data: { password, keepMissions } });
       showToast.success('가족 그룹에서 탈퇴하였습니다.');
       setShowLeaveModal(false);
       setPendingChanges({});
       navigate('/onboarding');
-    } catch (error: any) {
-      showToast.error(error.response?.data?.error?.message || '탈퇴에 실패했습니다.');
+    } catch (error: unknown) {
+      const err = error as Error & { response?: { data?: { error?: { message?: string } } } };
+      showToast.error(err.response?.data?.error?.message || '탈퇴에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +141,7 @@ export default function FamilySettingsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {accounts.map((account) => (
+          {accounts.map((account: Account) => (
             <div key={account.id} className="rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -320,7 +322,7 @@ export default function FamilySettingsPage() {
                         name="missionOption"
                         id="keep"
                         value={keepMissions}
-                        onChange={(e) => setKeepMissions('keep')}
+                        onChange={() => setKeepMissions('keep')}
                         checked={keepMissions === 'keep'}
                         className="mr-2 accent-primary-500"
                       />
@@ -334,7 +336,7 @@ export default function FamilySettingsPage() {
                         name="missionOption"
                         id="delete"
                         value={keepMissions}
-                        onChange={(e) => setKeepMissions('delete')}
+                        onChange={() => setKeepMissions('delete')}
                         checked={keepMissions === 'delete'}
                         className="mr-2 accent-primary-500"
                       />

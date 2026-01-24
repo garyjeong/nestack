@@ -1,30 +1,36 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { familyApi } from '../api/familyApi';
-import type { UpdateShareSettingsRequest } from '../types';
-import { showToast } from '@/shared/components/feedback/Toast';
-import { Card } from '@/shared/components/ui/Card';
-import { Switch } from '@/shared/components/ui/Switch';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { familyApi } from '../api/familyApi'
+import type { UpdateShareSettingsRequest } from '../types'
+import { showToast } from '@/shared/components/feedback/Toast'
 
-export const useShareSettings = () => {
-  const queryClient = useQueryClient();
+export const SHARE_SETTINGS_QUERY_KEY = ['family', 'share-settings']
 
-  const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['family', 'share-settings'],
-    queryFn: () => familyApi.getShareSettings(),
-  });
+export function useShareSettings() {
+  const queryClient = useQueryClient()
+
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: SHARE_SETTINGS_QUERY_KEY,
+    queryFn: familyApi.getShareSettings,
+  })
 
   const updateMutation = useMutation({
-    mutationFn: async (data: UpdateShareSettingsRequest) => {
-      await familyApi.updateShareSettings(data);
-    },
+    mutationFn: (data: UpdateShareSettingsRequest) => familyApi.updateShareSettings(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['family', 'share-settings'] });
-      showToast.success('공유 설정이 변경되었습니다.');
+      queryClient.invalidateQueries({ queryKey: SHARE_SETTINGS_QUERY_KEY })
+      showToast.success('공유 설정이 변경되었습니다.')
     },
-    onError: (error: any) => {
-      showToast.error(error.response?.data?.error?.message || '공유 설정 변경에 실패했습니다.');
+    onError: (error: Error & { response?: { data?: { error?: { message?: string } } } }) => {
+      showToast.error(error.response?.data?.error?.message || '공유 설정 변경에 실패했습니다.')
     },
-  });
+  })
 
-  return { accounts, isLoading, updateSettings: updateMutation.mutate };
-};
+  return {
+    accounts: data?.accounts ?? [],
+    familyGroup: data?.familyGroup ?? null,
+    isLoading,
+    error,
+    refetch,
+    updateSettings: updateMutation.mutate,
+    isUpdating: updateMutation.isPending,
+  }
+}

@@ -1,129 +1,319 @@
+import { Link } from 'react-router-dom'
+import { ChevronRight, TrendingUp, TrendingDown, Bell, Home, Heart, Plane, Wallet } from 'lucide-react'
+import { AppShell, Page } from '@/shared/components/layout'
+import { Card } from '@/shared/components/ui/Card'
+import { Avatar } from '@/shared/components/ui/Avatar'
+import { CurrencyDisplay, PercentDisplay } from '@/shared/components/ui/CountUpNumber'
+import { GradientCircularProgress } from '@/shared/components/ui/CircularProgress'
+import { useAppStore } from '@/app/store'
+import { useMissionSummary } from '@/features/mission/hooks/useMissionSummary'
+import { useMissions } from '@/features/mission/hooks/useMissions'
+import { useFinanceSummary } from '@/features/finance/hooks/useFinanceSummary'
+import { useTransactions } from '@/features/finance/hooks/useTransactions'
+import { cn } from '@/shared/utils/cn'
+
+// 미션 카테고리 아이콘 매핑
+const categoryIcons: Record<string, React.ReactNode> = {
+  housing: <Home className="h-5 w-5" />,
+  wedding: <Heart className="h-5 w-5" />,
+  travel: <Plane className="h-5 w-5" />,
+  default: <Wallet className="h-5 w-5" />,
+}
+
 export default function HomePage() {
+  const { user, isSSEConnected } = useAppStore()
+  const { summary: missionSummary, isLoading: isLoadingMissionSummary } = useMissionSummary()
+  const { missions: activeMissions, isLoading: isLoadingMissions } = useMissions({ status: 'in_progress', limit: 5 })
+  const { summary: financeSummary, isLoading: isLoadingFinanceSummary } = useFinanceSummary()
+  const { transactions: recentTransactions, isLoading: isLoadingTransactions } = useTransactions({ limit: 5 })
+
+  // 지난달 대비 증감률 (목업 데이터)
+  const savingsGrowth = 12.5
+
   return (
-    <div className="min-h-screen bg-stone-50 pb-20">
-      {/* Header */}
-      <header className="bg-white px-4 py-4 shadow-sm">
-        <div className="mx-auto max-w-lg flex items-center justify-between">
-          <h1 className="text-xl font-bold text-primary-600">Nestack</h1>
-          <div className="flex items-center gap-2">
-            <span className="flex h-2 w-2 rounded-full bg-green-500" />
-            <span className="text-sm text-stone-500">연결됨</span>
+    <AppShell>
+      {/* 모바일 헤더 - 간소화 */}
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3 lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between">
+          <img src="/logo.svg" alt="Nestack" className="h-7" />
+          <div className="flex items-center gap-3">
+            <span className={cn(
+              'flex h-2 w-2 rounded-full',
+              isSSEConnected ? 'bg-green-500' : 'bg-stone-300'
+            )} />
+            <button className="relative p-2 -mr-2 rounded-xl hover:bg-stone-100 transition-colors">
+              <Bell className="h-5 w-5 text-stone-600" />
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent-500" />
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="mx-auto max-w-lg px-4 py-6">
-        {/* Partner Status */}
-        <section className="mb-6 rounded-xl bg-white p-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="flex -space-x-2">
-              <div className="h-12 w-12 rounded-full bg-primary-100 ring-2 ring-white" />
-              <div className="h-12 w-12 rounded-full bg-accent-100 ring-2 ring-white" />
-            </div>
+      <Page className="pb-24 lg:pb-8">
+        {/* 인사말 섹션 */}
+        <section className="mb-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Avatar
+              src={user?.profileImage}
+              name={user?.name || ''}
+              size="md"
+            />
             <div>
-              <p className="font-semibold text-stone-900">함께하는 중</p>
-              <p className="text-sm text-stone-500">100일째 함께하고 있어요</p>
+              <p className="text-lg font-bold text-stone-900">
+                {user?.name ? `${user.name}님` : '안녕하세요'} 👋
+              </p>
+              <p className="text-sm text-stone-500">
+                {user?.familyGroupId ? '함께 목표를 향해 달려가고 있어요' : '오늘도 목표를 향해 함께해요'}
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Mission Progress */}
-        <section className="mb-6 rounded-xl bg-white p-4 shadow-sm">
-          <h2 className="mb-4 font-semibold text-stone-900">이번 달 미션</h2>
-          <div className="space-y-3">
-            <div>
-              <div className="mb-1 flex justify-between text-sm">
-                <span className="text-stone-600">결혼자금 모으기</span>
-                <span className="font-medium text-primary-600">45%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-stone-100">
-                <div className="h-full w-[45%] rounded-full bg-primary-500" />
+        {/* 총 저축액 카드 - 토스 스타일 */}
+        <section className="mb-6">
+          <Card variant="gradient" className="p-6 relative overflow-hidden">
+            {/* 배경 패턴 */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+
+            <div className="relative">
+              <p className="text-sm text-white/80 mb-1">이번 달 총 저축액</p>
+              {isLoadingFinanceSummary ? (
+                <div className="h-10 w-40 bg-white/20 rounded-lg animate-pulse" />
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">
+                    <CurrencyDisplay
+                      value={financeSummary?.totalBalance ?? 0}
+                      duration={800}
+                    />
+                  </span>
+                </div>
+              )}
+
+              {/* 증감률 */}
+              <div className="mt-3 flex items-center gap-2">
+                <span className={cn(
+                  'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+                  savingsGrowth >= 0 ? 'bg-white/20 text-white' : 'bg-red-400/20 text-red-100'
+                )}>
+                  {savingsGrowth >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  <PercentDisplay value={Math.abs(savingsGrowth)} duration={600} />
+                </span>
+                <span className="text-xs text-white/70">지난달 대비</span>
               </div>
             </div>
-            <div>
-              <div className="mb-1 flex justify-between text-sm">
-                <span className="text-stone-600">비상금 만들기</span>
-                <span className="font-medium text-primary-600">72%</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-stone-100">
-                <div className="h-full w-[72%] rounded-full bg-primary-500" />
-              </div>
+          </Card>
+        </section>
+
+        {/* 미션 카드 - 수평 스크롤 */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-stone-900">진행 중인 미션</h2>
+            <Link
+              to="/missions"
+              className="flex items-center gap-0.5 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              전체보기 <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {isLoadingMissions ? (
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex-shrink-0 w-36">
+                  <Card className="p-4 h-44">
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-16 w-16 mx-auto rounded-full bg-stone-200" />
+                      <div className="h-4 w-20 mx-auto rounded bg-stone-200" />
+                      <div className="h-3 w-16 mx-auto rounded bg-stone-100" />
+                    </div>
+                  </Card>
+                </div>
+              ))}
             </div>
+          ) : activeMissions.length === 0 ? (
+            <Card className="p-8 text-center">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-100">
+                <Wallet className="h-8 w-8 text-stone-400" />
+              </div>
+              <p className="text-stone-500 mb-3">진행 중인 미션이 없어요</p>
+              <Link
+                to="/missions/create"
+                className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors active:scale-[0.98]"
+              >
+                새 미션 만들기
+              </Link>
+            </Card>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
+              {activeMissions.map((mission) => {
+                const icon = categoryIcons[mission.category?.id ?? 'default'] || categoryIcons.default
+                return (
+                  <Link
+                    key={mission.id}
+                    to={`/missions/${mission.id}`}
+                    className="flex-shrink-0 w-36"
+                  >
+                    <Card interactive className="p-4 h-44 flex flex-col items-center justify-center text-center">
+                      {/* 원형 진행률 */}
+                      <GradientCircularProgress
+                        value={mission.progress}
+                        size="lg"
+                        className="mb-3"
+                      >
+                        <div className="text-primary-500">
+                          {icon}
+                        </div>
+                      </GradientCircularProgress>
+
+                      {/* 미션 이름 */}
+                      <p className="font-semibold text-stone-900 text-sm truncate w-full">
+                        {mission.name}
+                      </p>
+
+                      {/* D-day */}
+                      <p className="text-xs text-stone-500 mt-1">
+                        D-{mission.daysRemaining}
+                      </p>
+                    </Card>
+                  </Link>
+                )
+              })}
+
+              {/* 미션 추가 카드 */}
+              <Link to="/missions/create" className="flex-shrink-0 w-36">
+                <Card className="p-4 h-44 flex flex-col items-center justify-center border-2 border-dashed border-stone-200 bg-transparent shadow-none hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
+                  <div className="h-12 w-12 rounded-full bg-stone-100 flex items-center justify-center mb-2">
+                    <span className="text-2xl text-stone-400">+</span>
+                  </div>
+                  <p className="text-sm text-stone-500">미션 추가</p>
+                </Card>
+              </Link>
+            </div>
+          )}
+        </section>
+
+        {/* 요약 통계 */}
+        <section className="mb-6">
+          <div className="grid grid-cols-2 gap-3">
+            {/* 이번 달 미션 진행률 */}
+            <Card className="p-4">
+              <p className="text-xs text-stone-500 mb-1">이번 달 미션</p>
+              {isLoadingMissionSummary ? (
+                <div className="h-7 w-16 bg-stone-200 rounded animate-pulse" />
+              ) : (
+                <p className="text-xl font-bold text-stone-900">
+                  <PercentDisplay value={missionSummary?.monthlyProgress ?? 0} duration={600} />
+                </p>
+              )}
+              <p className="text-xs text-stone-400 mt-1">
+                {missionSummary?.completedMissions ?? 0}/{(missionSummary?.activeMissions ?? 0) + (missionSummary?.completedMissions ?? 0)} 완료
+              </p>
+            </Card>
+
+            {/* 연결된 계좌 */}
+            <Card className="p-4">
+              <p className="text-xs text-stone-500 mb-1">연결된 계좌</p>
+              {isLoadingFinanceSummary ? (
+                <div className="h-7 w-12 bg-stone-200 rounded animate-pulse" />
+              ) : (
+                <p className="text-xl font-bold text-stone-900">
+                  {financeSummary?.connectedAccounts ?? 0}개
+                </p>
+              )}
+              <p className="text-xs text-stone-400 mt-1">
+                총 자산 관리 중
+              </p>
+            </Card>
           </div>
         </section>
 
-        {/* Total Savings */}
-        <section className="mb-6 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 p-6 text-white shadow-sm">
-          <p className="text-sm opacity-80">총 저축액</p>
-          <p className="mt-1 font-mono text-3xl font-bold">12,450,000원</p>
-          <p className="mt-2 text-sm opacity-80">지난달 대비 +520,000원</p>
-        </section>
-
-        {/* Recent Transactions */}
-        <section className="rounded-xl bg-white p-4 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-stone-900">최근 거래</h2>
-            <a href="/finance" className="text-sm text-primary-600">더보기</a>
+        {/* 최근 거래 - 타임라인 스타일 */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-stone-900">최근 활동</h2>
+            <Link
+              to="/finance/transactions"
+              className="flex items-center gap-0.5 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              전체보기 <ChevronRight className="h-4 w-4" />
+            </Link>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-                  <span className="text-green-600">+</span>
-                </div>
-                <div>
-                  <p className="font-medium text-stone-900">월급</p>
-                  <p className="text-sm text-stone-500">KB국민은행</p>
-                </div>
-              </div>
-              <span className="font-mono font-medium text-green-600">+3,500,000</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                  <span className="text-red-600">-</span>
-                </div>
-                <div>
-                  <p className="font-medium text-stone-900">식비</p>
-                  <p className="text-sm text-stone-500">카카오페이</p>
-                </div>
-              </div>
-              <span className="font-mono font-medium text-red-600">-45,000</span>
-            </div>
-          </div>
-        </section>
-      </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 border-t border-stone-200 bg-white">
-        <div className="mx-auto flex max-w-lg">
-          <a href="/" className="flex flex-1 flex-col items-center py-3 text-primary-600">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span className="mt-1 text-xs">홈</span>
-          </a>
-          <a href="/missions" className="flex flex-1 flex-col items-center py-3 text-stone-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-            <span className="mt-1 text-xs">미션</span>
-          </a>
-          <a href="/finance" className="flex flex-1 flex-col items-center py-3 text-stone-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            <span className="mt-1 text-xs">가계부</span>
-          </a>
-          <a href="/mypage" className="flex flex-1 flex-col items-center py-3 text-stone-400">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="mt-1 text-xs">마이</span>
-          </a>
-        </div>
-      </nav>
-    </div>
+          <Card>
+            {isLoadingTransactions ? (
+              <div className="divide-y divide-stone-100">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-4">
+                    <div className="h-10 w-10 rounded-xl bg-stone-200 animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-24 bg-stone-200 rounded animate-pulse" />
+                      <div className="h-3 w-16 bg-stone-100 rounded animate-pulse" />
+                    </div>
+                    <div className="h-4 w-20 bg-stone-200 rounded animate-pulse" />
+                  </div>
+                ))}
+              </div>
+            ) : recentTransactions.length === 0 ? (
+              <div className="p-8 text-center">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100">
+                  <Wallet className="h-7 w-7 text-stone-400" />
+                </div>
+                <p className="text-stone-500">최근 거래 내역이 없어요</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-stone-100">
+                {recentTransactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center gap-3 p-4">
+                    {/* 아이콘 */}
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-xl',
+                        tx.transactionType === 'deposit'
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-stone-100 text-stone-600'
+                      )}
+                    >
+                      {tx.transactionType === 'deposit' ? (
+                        <TrendingUp className="h-5 w-5" />
+                      ) : (
+                        <TrendingDown className="h-5 w-5" />
+                      )}
+                    </div>
+
+                    {/* 설명 */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-stone-900 truncate">
+                        {tx.description}
+                      </p>
+                      <p className="text-xs text-stone-500">
+                        {tx.bankAccount?.bankName}
+                      </p>
+                    </div>
+
+                    {/* 금액 */}
+                    <span
+                      className={cn(
+                        'font-semibold tabular-nums text-sm',
+                        tx.transactionType === 'deposit' ? 'text-green-600' : 'text-stone-900'
+                      )}
+                    >
+                      {tx.transactionType === 'deposit' ? '+' : '-'}
+                      {formatCurrency(tx.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </section>
+      </Page>
+    </AppShell>
   )
+}
+
+// Helper function for currency formatting
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('ko-KR').format(amount) + '원'
 }

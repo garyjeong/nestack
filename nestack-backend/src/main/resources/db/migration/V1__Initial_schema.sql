@@ -1,0 +1,25 @@
+-- Flyway migration script
+-- This file will be executed automatically on application startup
+-- Note: Actual schema should match existing PostgreSQL database
+
+-- Example: Create users table (if not exists)
+-- CREATE TABLE IF NOT EXISTS users (
+--     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--     email VARCHAR(255) UNIQUE NOT NULL,
+--     password_hash VARCHAR(255),
+--     name VARCHAR(100) NOT NULL,
+--     profile_image_url VARCHAR(500),
+--     provider VARCHAR(50) NOT NULL DEFAULT 'LOCAL',
+--     provider_id VARCHAR(255),
+--     email_verified BOOLEAN DEFAULT FALSE,
+--     email_verified_at TIMESTAMP,
+--     status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+--     last_login_at TIMESTAMP,
+--     family_group_id UUID,
+--     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     deleted_at TIMESTAMP
+-- );
+
+-- Note: In production, use Flyway migrations to manage schema changes
+-- This is a placeholder - actual migrations should be created based on existing schema

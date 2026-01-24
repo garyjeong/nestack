@@ -13,7 +13,7 @@ export function useCreateFamily() {
   const { setUser, user } = useAppStore()
 
   const createFamilyMutation = useMutation({
-    mutationFn: (data?: CreateFamilyRequest) => familyApi.createFamily(data),
+    mutationFn: (data: CreateFamilyRequest = {}) => familyApi.createFamily(data),
     onSuccess: (response) => {
       // Update user with family group ID
       if (user) {

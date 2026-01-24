@@ -1,103 +1,329 @@
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { useMutation } from '@tanstack/react-query'
+import {
+  ArrowLeft,
+  Bell,
+  Mail,
+  ChevronRight,
+  Key,
+  CreditCard,
+  FileText,
+  Shield,
+  Info,
+  Trash2,
+  X,
+  AlertTriangle,
+} from 'lucide-react'
+import { AppShell, Page } from '@/shared/components/layout'
+import { Card } from '@/shared/components/ui/Card'
+import { Button } from '@/shared/components/ui/Button'
+import { Input } from '@/shared/components/ui/Input'
+import { useAppStore } from '@/app/store'
+import { apiClient } from '@/api/client'
+import { showToast } from '@/shared/components/feedback/Toast'
+
+interface NotificationSettings {
+  pushEnabled: boolean
+  emailEnabled: boolean
+}
+
+interface ShareSettings {
+  shareBalance: boolean
+  shareTransactions: boolean
+  shareBadges: boolean
+}
+
 export default function SettingsPage() {
+  const navigate = useNavigate()
+  const { logout } = useAppStore()
+
+  // Notification settings state
+  const [notifications, setNotifications] = useState<NotificationSettings>({
+    pushEnabled: true,
+    emailEnabled: false,
+  })
+
+  // Share settings state
+  const [shareSettings, setShareSettings] = useState<ShareSettings>({
+    shareBalance: true,
+    shareTransactions: true,
+    shareBadges: false,
+  })
+
+  // Delete account modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+
+  // Save notification settings mutation
+  const saveNotificationsMutation = useMutation({
+    mutationFn: async (data: NotificationSettings) => {
+      const response = await apiClient.patch('/users/me/notifications', data)
+      return response.data.data
+    },
+    onSuccess: () => {
+      showToast.success('알림 설정이 저장되었습니다.')
+    },
+    onError: () => {
+      showToast.error('알림 설정 저장에 실패했습니다.')
+    },
+  })
+
+  // Delete account mutation
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const response = await apiClient.delete('/users/me', { data: { password } })
+      return response.data
+    },
+    onSuccess: () => {
+      showToast.success('계정이 삭제되었습니다.')
+      logout()
+      navigate('/auth/login')
+    },
+    onError: (error: Error & { response?: { data?: { error?: { message?: string } } } }) => {
+      showToast.error(error.response?.data?.error?.message || '계정 삭제에 실패했습니다.')
+    },
+  })
+
+  const handleNotificationChange = (key: keyof NotificationSettings) => {
+    const newSettings = { ...notifications, [key]: !notifications[key] }
+    setNotifications(newSettings)
+    saveNotificationsMutation.mutate(newSettings)
+  }
+
+  const handleShareChange = (key: keyof ShareSettings) => {
+    setShareSettings((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
+
+  const handleDeleteAccount = () => {
+    if (!deletePassword) {
+      showToast.error('비밀번호를 입력해주세요.')
+      return
+    }
+    deleteAccountMutation.mutate(deletePassword)
+  }
+
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-center gap-4">
-          <a href="/mypage" className="text-stone-600">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </a>
+    <AppShell showBottomNav={false}>
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm">
+        <div className="mx-auto flex max-w-full items-center gap-4 sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
+          <button
+            onClick={() => navigate(-1)}
+            className="rounded-lg p-1 text-stone-600 transition-colors hover:bg-stone-100"
+          >
+            <ArrowLeft className="h-6 w-6" />
+          </button>
           <h1 className="text-xl font-bold text-stone-900">설정</h1>
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-6">
-        <section className="mb-6 rounded-xl bg-white shadow-sm">
-          <h3 className="border-b border-stone-100 px-4 py-3 font-semibold text-stone-900">알림</h3>
-          <div className="divide-y divide-stone-100">
-            <div className="flex items-center justify-between p-4">
-              <span className="text-stone-900">푸시 알림</span>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" className="peer sr-only" defaultChecked />
-                <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full" />
-              </label>
+      <Page narrow>
+        <div className="space-y-6">
+          {/* Notification Settings */}
+          <section>
+            <h3 className="mb-3 text-lg font-semibold text-stone-900">알림</h3>
+            <Card className="divide-y divide-stone-100">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <Bell className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">푸시 알림</span>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={notifications.pushEnabled}
+                    onChange={() => handleNotificationChange('pushEnabled')}
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full" />
+                </label>
+              </div>
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <Mail className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">이메일 알림</span>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    className="peer sr-only"
+                    checked={notifications.emailEnabled}
+                    onChange={() => handleNotificationChange('emailEnabled')}
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full" />
+                </label>
+              </div>
+            </Card>
+          </section>
+
+          {/* Share Settings */}
+          <section>
+            <h3 className="mb-3 text-lg font-semibold text-stone-900">공유 설정</h3>
+            <Card className="p-4">
+              <p className="mb-4 text-sm text-stone-500">파트너와 공유할 정보를 선택하세요</p>
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={shareSettings.shareBalance}
+                    onChange={() => handleShareChange('shareBalance')}
+                    className="h-4 w-4 rounded border-stone-300 text-primary-500 focus:ring-primary-500"
+                  />
+                  <span className="text-stone-900">계좌 잔액</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={shareSettings.shareTransactions}
+                    onChange={() => handleShareChange('shareTransactions')}
+                    className="h-4 w-4 rounded border-stone-300 text-primary-500 focus:ring-primary-500"
+                  />
+                  <span className="text-stone-900">거래 내역</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={shareSettings.shareBadges}
+                    onChange={() => handleShareChange('shareBadges')}
+                    className="h-4 w-4 rounded border-stone-300 text-primary-500 focus:ring-primary-500"
+                  />
+                  <span className="text-stone-900">뱃지 획득 알림</span>
+                </label>
+              </div>
+            </Card>
+          </section>
+
+          {/* Account Settings */}
+          <section>
+            <h3 className="mb-3 text-lg font-semibold text-stone-900">계정</h3>
+            <Card className="divide-y divide-stone-100">
+              <Link
+                to="/auth/change-password"
+                className="flex items-center justify-between p-4 transition-colors hover:bg-stone-50"
+              >
+                <div className="flex items-center gap-3">
+                  <Key className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">비밀번호 변경</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-stone-400" />
+              </Link>
+              <Link
+                to="/finance/openbanking"
+                className="flex items-center justify-between p-4 transition-colors hover:bg-stone-50"
+              >
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">연결된 계정 관리</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-stone-400" />
+              </Link>
+            </Card>
+          </section>
+
+          {/* Other Settings */}
+          <section>
+            <h3 className="mb-3 text-lg font-semibold text-stone-900">기타</h3>
+            <Card className="divide-y divide-stone-100">
+              <Link
+                to="/terms"
+                className="flex items-center justify-between p-4 transition-colors hover:bg-stone-50"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">이용약관</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-stone-400" />
+              </Link>
+              <Link
+                to="/privacy"
+                className="flex items-center justify-between p-4 transition-colors hover:bg-stone-50"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">개인정보처리방침</span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-stone-400" />
+              </Link>
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <Info className="h-5 w-5 text-stone-500" />
+                  <span className="text-stone-900">버전</span>
+                </div>
+                <span className="text-stone-500">1.0.0</span>
+              </div>
+            </Card>
+          </section>
+
+          {/* Delete Account Button */}
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white py-4 text-red-500 transition-colors hover:bg-red-50"
+          >
+            <Trash2 className="h-5 w-5" />
+            <span className="font-medium">회원 탈퇴</span>
+          </button>
+        </div>
+      </Page>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-6 flex items-start justify-between">
+              <h2 className="text-xl font-bold text-stone-900">회원 탈퇴</h2>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-stone-400 transition-colors hover:text-stone-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
-            <div className="flex items-center justify-between p-4">
-              <span className="text-stone-900">이메일 알림</span>
-              <label className="relative inline-flex cursor-pointer items-center">
-                <input type="checkbox" className="peer sr-only" />
-                <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full" />
+
+            <div className="mb-6 flex items-start gap-4 rounded-xl bg-amber-50 p-4">
+              <AlertTriangle className="h-6 w-6 flex-shrink-0 text-amber-500" />
+              <div>
+                <p className="font-medium text-amber-800">주의사항</p>
+                <p className="mt-1 text-sm text-amber-700">
+                  회원 탈퇴 시 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다. 가족 그룹에서도
+                  자동으로 탈퇴됩니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="mb-2 block text-sm font-medium text-stone-700">
+                비밀번호 확인
               </label>
+              <Input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="비밀번호를 입력하세요"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1"
+                disabled={deleteAccountMutation.isPending}
+              >
+                취소
+              </Button>
+              <Button
+                onClick={handleDeleteAccount}
+                className="flex-1 bg-red-500 hover:bg-red-600"
+                isLoading={deleteAccountMutation.isPending}
+                disabled={!deletePassword || deleteAccountMutation.isPending}
+              >
+                탈퇴하기
+              </Button>
             </div>
           </div>
-        </section>
-
-        <section className="mb-6 rounded-xl bg-white shadow-sm">
-          <h3 className="border-b border-stone-100 px-4 py-3 font-semibold text-stone-900">공유 설정</h3>
-          <div className="p-4">
-            <p className="mb-3 text-sm text-stone-500">파트너와 공유할 정보를 선택하세요</p>
-            <div className="space-y-3">
-              <label className="flex items-center">
-                <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-stone-300 text-primary-500" />
-                <span className="ml-3 text-stone-900">계좌 잔액</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-stone-300 text-primary-500" />
-                <span className="ml-3 text-stone-900">거래 내역</span>
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="h-4 w-4 rounded border-stone-300 text-primary-500" />
-                <span className="ml-3 text-stone-900">뱃지 획득 알림</span>
-              </label>
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-6 rounded-xl bg-white shadow-sm">
-          <h3 className="border-b border-stone-100 px-4 py-3 font-semibold text-stone-900">계정</h3>
-          <div className="divide-y divide-stone-100">
-            <a href="#" className="flex items-center justify-between p-4">
-              <span className="text-stone-900">비밀번호 변경</span>
-              <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-            <a href="#" className="flex items-center justify-between p-4">
-              <span className="text-stone-900">연결된 계정 관리</span>
-              <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
-        </section>
-
-        <section className="rounded-xl bg-white shadow-sm">
-          <h3 className="border-b border-stone-100 px-4 py-3 font-semibold text-stone-900">기타</h3>
-          <div className="divide-y divide-stone-100">
-            <a href="#" className="flex items-center justify-between p-4">
-              <span className="text-stone-900">이용약관</span>
-              <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-            <a href="#" className="flex items-center justify-between p-4">
-              <span className="text-stone-900">개인정보처리방침</span>
-              <svg className="h-5 w-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-            <div className="flex items-center justify-between p-4">
-              <span className="text-stone-900">버전</span>
-              <span className="text-stone-500">1.0.0</span>
-            </div>
-          </div>
-        </section>
-
-        <button className="mt-6 w-full rounded-lg border border-red-300 py-3 text-red-500 transition hover:bg-red-50">
-          회원 탈퇴
-        </button>
-      </main>
-    </div>
+        </div>
+      )}
+    </AppShell>
   )
 }

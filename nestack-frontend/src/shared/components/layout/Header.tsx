@@ -50,7 +50,7 @@ export function Header({
         className
       )}
     >
-      <div className="mx-auto flex max-w-lg items-center justify-between">
+      <div className="mx-auto flex max-w-full items-center justify-between sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
         {/* Left Side */}
         <div className="flex items-center gap-4">
           {showBack && (
@@ -91,7 +91,7 @@ interface PageHeaderProps {
 export function PageHeader({ title, subtitle, rightElement }: PageHeaderProps) {
   return (
     <header className="bg-white px-4 py-4 shadow-sm">
-      <div className="mx-auto flex max-w-lg items-center justify-between">
+      <div className="mx-auto flex max-w-full items-center justify-between sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
         <div>
           <h1 className="text-xl font-bold text-stone-900">{title}</h1>
           {subtitle && (
@@ -116,7 +116,7 @@ export function DetailHeader({ title, showMenu, onMenuClick }: DetailHeaderProps
 
   return (
     <header className="bg-white px-4 py-4 shadow-sm">
-      <div className="mx-auto flex max-w-lg items-center justify-between">
+      <div className="mx-auto flex max-w-full items-center justify-between sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
