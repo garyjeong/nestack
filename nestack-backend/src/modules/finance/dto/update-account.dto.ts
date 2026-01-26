@@ -1,28 +1,20 @@
-import { IsOptional, IsString, IsEnum, IsBoolean, MaxLength } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString, IsBoolean, IsEnum, MaxLength } from 'class-validator';
 import { ShareStatus } from '../../../common/enums';
 
 export class UpdateAccountDto {
-  @ApiPropertyOptional({
-    description: '계좌 별명',
-    example: '결혼자금 계좌',
-  })
+  @ApiProperty({ description: 'Account alias', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   accountAlias?: string;
 
-  @ApiPropertyOptional({
-    description: '공유 상태',
-    enum: ShareStatus,
-  })
+  @ApiProperty({ description: 'Share status', enum: ShareStatus, required: false })
   @IsOptional()
   @IsEnum(ShareStatus)
   shareStatus?: ShareStatus;
 
-  @ApiPropertyOptional({
-    description: '숨김 여부',
-  })
+  @ApiProperty({ description: 'Hide account', required: false })
   @IsOptional()
   @IsBoolean()
   isHidden?: boolean;

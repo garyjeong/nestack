@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MissionsController } from './missions.controller';
 import { MissionsService } from './missions.service';
-import { Mission } from './entities/mission.entity';
-import { MissionTemplate } from './entities/mission-template.entity';
-import { LifeCycleCategory } from './entities/lifecycle-category.entity';
-import { MissionSharedAccount } from './entities/mission-shared-account.entity';
-import { Transaction } from '../finance/entities/transaction.entity';
+import {
+  Mission,
+  MissionTemplate,
+  LifeCycleCategory,
+  Transaction,
+  User,
+} from '../../database/entities';
 
 @Module({
   imports: [
@@ -14,8 +16,8 @@ import { Transaction } from '../finance/entities/transaction.entity';
       Mission,
       MissionTemplate,
       LifeCycleCategory,
-      MissionSharedAccount,
       Transaction,
+      User,
     ]),
   ],
   controllers: [MissionsController],

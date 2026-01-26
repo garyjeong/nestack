@@ -2,12 +2,18 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FamilyController } from './family.controller';
 import { FamilyService } from './family.service';
-import { FamilyGroup } from './entities/family-group.entity';
-import { InviteCode } from './entities/invite-code.entity';
-import { User } from '../users/entities/user.entity';
+import {
+  User,
+  FamilyGroup,
+  InviteCode,
+  BankAccount,
+  Mission,
+} from '../../database/entities';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FamilyGroup, InviteCode, User])],
+  imports: [
+    TypeOrmModule.forFeature([User, FamilyGroup, InviteCode, BankAccount, Mission]),
+  ],
   controllers: [FamilyController],
   providers: [FamilyService],
   exports: [FamilyService],

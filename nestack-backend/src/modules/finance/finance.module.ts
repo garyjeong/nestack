@@ -1,14 +1,20 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { HttpModule } from '@nestjs/axios';
 import { FinanceController } from './finance.controller';
 import { FinanceService } from './finance.service';
-import { BankAccount } from './entities/bank-account.entity';
-import { Transaction } from './entities/transaction.entity';
-import { OpenBankingToken } from './entities/openbanking-token.entity';
+import {
+  BankAccount,
+  Transaction,
+  OpenBankingToken,
+  User,
+  MissionSharedAccount,
+} from '../../database/entities';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([BankAccount, Transaction, OpenBankingToken]),
+    TypeOrmModule.forFeature([BankAccount, Transaction, OpenBankingToken, User, MissionSharedAccount]),
+    HttpModule,
   ],
   controllers: [FinanceController],
   providers: [FinanceService],

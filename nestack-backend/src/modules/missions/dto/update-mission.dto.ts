@@ -1,53 +1,44 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
-  IsOptional,
   IsString,
   IsNumber,
+  IsOptional,
   IsDateString,
   MaxLength,
   Min,
+  IsBoolean,
 } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateMissionDto {
-  @ApiPropertyOptional({
-    description: '미션 이름',
-    example: '결혼 자금 모으기',
-  })
+  @ApiProperty({ description: 'Mission name', required: false })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   name?: string;
 
-  @ApiPropertyOptional({
-    description: '미션 설명',
-    example: '결혼식 비용 5천만원 목표',
-  })
+  @ApiProperty({ description: 'Mission description', required: false })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({
-    description: '목표 금액',
-    example: 50000000,
-  })
+  @ApiProperty({ description: 'Goal amount', required: false })
   @IsOptional()
   @IsNumber()
   @Min(0)
   goalAmount?: number;
 
-  @ApiPropertyOptional({
-    description: '시작일',
-    example: '2024-01-01',
-  })
+  @ApiProperty({ description: 'Start date', required: false })
   @IsOptional()
   @IsDateString()
   startDate?: string;
 
-  @ApiPropertyOptional({
-    description: '목표일',
-    example: '2025-12-31',
-  })
+  @ApiProperty({ description: 'Due date', required: false })
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiProperty({ description: 'Share with family', required: false })
+  @IsOptional()
+  @IsBoolean()
+  shareWithFamily?: boolean;
 }

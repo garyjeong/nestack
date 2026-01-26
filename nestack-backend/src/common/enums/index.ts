@@ -1,107 +1,117 @@
 // User related enums
-export enum AuthProvider {
-  LOCAL = 'local',
-  GOOGLE = 'google',
-}
-
 export enum UserStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  WITHDRAWN = 'withdrawn',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  SUSPENDED = 'SUSPENDED',
 }
 
-// Family Group related enums
-export enum FamilyGroupStatus {
-  ACTIVE = 'active',
-  DISSOLVED = 'dissolved',
+export enum AuthProvider {
+  LOCAL = 'LOCAL',
+  GOOGLE = 'GOOGLE',
+  KAKAO = 'KAKAO',
+  APPLE = 'APPLE',
+}
+
+// Family related enums
+export enum FamilyStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 export enum InviteCodeStatus {
-  PENDING = 'pending',
-  USED = 'used',
-  EXPIRED = 'expired',
-  REVOKED = 'revoked',
-}
-
-export enum ShareStatus {
-  FULL = 'full',
-  BALANCE_ONLY = 'balance_only',
-  PRIVATE = 'private',
-}
-
-// Category related enums
-export enum CategoryStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
+  PENDING = 'PENDING',
+  USED = 'USED',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED',
 }
 
 // Mission related enums
 export enum MissionStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
+  PENDING = 'PENDING',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
 }
 
 export enum MissionType {
-  TEMPLATE = 'template',
-  CUSTOM = 'custom',
+  TEMPLATE = 'TEMPLATE',
+  CUSTOM = 'CUSTOM',
 }
 
 export enum MissionLevel {
-  MAIN = 'main',
-  MONTHLY = 'monthly',
-  WEEKLY = 'weekly',
-  DAILY = 'daily',
+  MAIN = 'MAIN',
+  SUB = 'SUB',
 }
 
 export enum GoalType {
-  AMOUNT = 'amount',
-  AMOUNT_COUNT = 'amount_count',
+  AMOUNT = 'AMOUNT',
+  COUNT = 'COUNT',
+  PERCENTAGE = 'PERCENTAGE',
 }
 
-// Transaction related enums
+// Finance related enums
 export enum TransactionType {
-  DEPOSIT = 'deposit',
-  WITHDRAWAL = 'withdrawal',
+  DEPOSIT = 'DEPOSIT',
+  WITHDRAWAL = 'WITHDRAWAL',
+}
+
+export enum ShareStatus {
+  PRIVATE = 'PRIVATE',
+  SHARED = 'SHARED',
 }
 
 // Badge related enums
 export enum BadgeType {
-  LIFECYCLE = 'lifecycle',
-  STREAK = 'streak',
-  FAMILY = 'family',
+  LIFECYCLE = 'LIFECYCLE',
+  ACHIEVEMENT = 'ACHIEVEMENT',
+  STREAK = 'STREAK',
+  SPECIAL = 'SPECIAL',
+}
+
+export enum BadgeConditionType {
+  MISSION_COMPLETE = 'MISSION_COMPLETE',
+  SAVINGS_AMOUNT = 'SAVINGS_AMOUNT',
+  STREAK_DAYS = 'STREAK_DAYS',
+  CATEGORY_COMPLETE = 'CATEGORY_COMPLETE',
+  FIRST_ACTION = 'FIRST_ACTION',
 }
 
 export enum BadgeIssueType {
-  AUTO = 'auto',
-  MANUAL = 'manual',
+  AUTO = 'AUTO',
+  MANUAL = 'MANUAL',
 }
 
 // Admin related enums
 export enum AdminRole {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN = 'admin',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
 }
 
 export enum AdminStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
-// Announcement related enums
-export enum DisplayType {
-  POPUP = 'popup',
-  BANNER = 'banner',
+export enum AnnouncementDisplayType {
+  BANNER = 'BANNER',
+  POPUP = 'POPUP',
+  NOTICE = 'NOTICE',
 }
 
 export enum AnnouncementStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }
 
 // Token related enums
 export enum TokenType {
-  EMAIL_VERIFY = 'email_verify',
-  PASSWORD_RESET = 'password_reset',
+  EMAIL_VERIFY = 'EMAIL_VERIFY',
+  PASSWORD_RESET = 'PASSWORD_RESET',
+}
+
+// Category status
+export enum CategoryStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
 }

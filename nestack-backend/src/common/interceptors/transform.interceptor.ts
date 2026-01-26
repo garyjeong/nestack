@@ -6,36 +6,34 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ApiSuccessResponse } from '../interfaces';
+
+export interface Response<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+}
 
 @Injectable()
 export class TransformInterceptor<T>
-  implements NestInterceptor<T, ApiSuccessResponse<T>>
+  implements NestInterceptor<T, Response<T>>
 {
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ApiSuccessResponse<T>> {
+  ): Observable<Response<T>> {
     return next.handle().pipe(
       map((data) => {
-        // If data already has pagination meta, preserve it
-        if (data && typeof data === 'object' && 'meta' in data && 'data' in data) {
-          return {
-            success: true as const,
-            data: data.data,
-            meta: {
-              timestamp: new Date().toISOString(),
-              ...(data.meta.pagination && { pagination: data.meta.pagination }),
-            },
-          };
+        // If data already has success property, return as is
+        if (data && typeof data === 'object' && 'success' in data) {
+          return data;
         }
 
         return {
-          success: true as const,
+          success: true,
+          message: 'Success',
           data,
-          meta: {
-            timestamp: new Date().toISOString(),
-          },
+          timestamp: new Date().toISOString(),
         };
       }),
     );

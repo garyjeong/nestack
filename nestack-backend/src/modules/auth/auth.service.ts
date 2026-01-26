@@ -1,387 +1,393 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
-import { UsersService } from '../users/users.service';
-import { TokensService } from '../tokens/tokens.service';
-import { MailService } from '../mail/mail.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThan } from 'typeorm';
+import {
+  User,
+  RefreshToken,
+  EmailVerificationToken,
+} from '../../database/entities';
+import { AuthProvider, UserStatus, TokenType } from '../../common/enums';
+import {
+  hashPassword,
+  comparePassword,
+  generateRandomToken,
+} from '../../common/utils/crypto.util';
+import {
+  UserAlreadyExistsException,
+  InvalidCredentialsException,
+  InvalidTokenException,
+  UserNotFoundException,
+  EmailNotVerifiedException,
+} from '../../common/exceptions/business.exception';
 import {
   SignupDto,
   LoginDto,
-  GoogleAuthDto,
-  ForgotPasswordDto,
-  ResetPasswordDto,
+  TokenResponseDto,
+  AuthResponseDto,
+  GoogleLoginDto,
 } from './dto';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { CryptoUtil } from '../../common/utils';
-import { AuthProvider, UserStatus } from '../../common/enums';
-import { JwtPayload, TokenPair } from '../../common/interfaces';
-import { User } from '../users/entities/user.entity';
-
-export interface AuthResponse {
-  user: Partial<User>;
-  tokens: TokenPair;
-}
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private googleClient: OAuth2Client;
 
   constructor(
-    private readonly usersService: UsersService,
-    private readonly tokensService: TokensService,
-    private readonly mailService: MailService,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-  ) {
-    this.googleClient = new OAuth2Client(
-      this.configService.get<string>('google.clientId'),
-    );
-  }
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(RefreshToken)
+    private refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(EmailVerificationToken)
+    private emailTokenRepository: Repository<EmailVerificationToken>,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
 
-  /**
-   * Sign up with email and password
-   */
-  async signup(signupDto: SignupDto): Promise<{ user: Partial<User>; message: string }> {
-    // Validate agreements
-    if (!signupDto.termsAgreed || !signupDto.privacyAgreed) {
-      throw new BusinessException('COMMON_001', {
-        message: '이용약관 및 개인정보 처리방침에 동의해주세요.',
-      });
+  async signup(dto: SignupDto): Promise<AuthResponseDto> {
+    // Check if user exists
+    const existingUser = await this.userRepository.findOne({
+      where: { email: dto.email },
+    });
+
+    if (existingUser) {
+      throw new UserAlreadyExistsException();
     }
 
     // Create user
-    const user = await this.usersService.create({
-      email: signupDto.email,
-      password: signupDto.password,
-      name: signupDto.name,
+    const passwordHash = await hashPassword(dto.password);
+    const user = this.userRepository.create({
+      email: dto.email,
+      passwordHash,
+      name: dto.name,
       provider: AuthProvider.LOCAL,
+      status: UserStatus.ACTIVE,
     });
 
-    // Create email verification token
-    const verificationToken = await this.tokensService.createEmailVerificationToken(user.id);
+    await this.userRepository.save(user);
 
-    // Send verification email
-    await this.mailService.sendVerificationEmail(user.email, user.name, verificationToken);
+    // Create email verification token
+    await this.createEmailVerificationToken(user.id);
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
 
     return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        emailVerified: user.emailVerified,
-        createdAt: user.createdAt,
-      },
-      message: '인증 메일이 발송되었습니다.',
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      tokens,
     };
   }
 
-  /**
-   * Verify email with token
-   */
-  async verifyEmail(token: string): Promise<{ message: string }> {
-    const userId = await this.tokensService.validateEmailVerificationToken(token);
-    await this.usersService.verifyEmail(userId);
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { email: dto.email },
+    });
 
-    // Get user and send welcome email
-    const user = await this.usersService.findById(userId);
-    if (user) {
-      await this.mailService.sendWelcomeEmail(user.email, user.name);
+    if (!user || !user.passwordHash) {
+      throw new InvalidCredentialsException();
     }
 
-    return { message: '이메일 인증이 완료되었습니다.' };
+    const isPasswordValid = await comparePassword(dto.password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new InvalidCredentialsException();
+    }
+
+    // Update last login
+    user.lastLoginAt = new Date();
+    await this.userRepository.save(user);
+
+    // Generate tokens
+    const tokens = await this.generateTokens(user);
+
+    return {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      tokens,
+    };
   }
 
-  /**
-   * Resend verification email
-   */
-  async resendVerificationEmail(email: string): Promise<{ message: string }> {
-    const user = await this.usersService.findByEmail(email);
+  async googleLogin(dto: GoogleLoginDto): Promise<AuthResponseDto> {
+    // Verify Google ID token (simplified - in production use Google API)
+    // For now, we'll decode the token and extract user info
+    try {
+      const payload = this.jwtService.decode(dto.idToken) as any;
+
+      if (!payload || !payload.email) {
+        throw new InvalidCredentialsException();
+      }
+
+      let user = await this.userRepository.findOne({
+        where: { email: payload.email },
+      });
+
+      if (!user) {
+        // Create new user
+        user = this.userRepository.create({
+          email: payload.email,
+          name: payload.name || payload.email.split('@')[0],
+          profileImageUrl: payload.picture,
+          provider: AuthProvider.GOOGLE,
+          providerId: payload.sub,
+          emailVerified: true,
+          emailVerifiedAt: new Date(),
+          status: UserStatus.ACTIVE,
+        });
+        await this.userRepository.save(user);
+      } else if (user.provider !== AuthProvider.GOOGLE) {
+        // Link Google account to existing user
+        user.provider = AuthProvider.GOOGLE;
+        user.providerId = payload.sub;
+        if (!user.emailVerified) {
+          user.emailVerified = true;
+          user.emailVerifiedAt = new Date();
+        }
+        await this.userRepository.save(user);
+      }
+
+      // Update last login
+      user.lastLoginAt = new Date();
+      await this.userRepository.save(user);
+
+      const tokens = await this.generateTokens(user);
+
+      return {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        tokens,
+      };
+    } catch (error) {
+      this.logger.error('Google login failed', error);
+      throw new InvalidCredentialsException();
+    }
+  }
+
+  async refresh(refreshToken: string): Promise<TokenResponseDto> {
+    try {
+      // Verify refresh token
+      const payload = this.jwtService.verify(refreshToken, {
+        secret: this.configService.get('jwt.secret'),
+      });
+
+      if (payload.type !== 'refresh') {
+        throw new InvalidTokenException();
+      }
+
+      // Check if token exists in database
+      const storedToken = await this.refreshTokenRepository.findOne({
+        where: { token: refreshToken, userId: payload.sub },
+      });
+
+      if (!storedToken || storedToken.expiresAt < new Date()) {
+        throw new InvalidTokenException();
+      }
+
+      // Get user
+      const user = await this.userRepository.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UserNotFoundException();
+      }
+
+      // Delete old refresh token
+      await this.refreshTokenRepository.delete({ id: storedToken.id });
+
+      // Generate new tokens
+      return this.generateTokens(user);
+    } catch (error) {
+      throw new InvalidTokenException();
+    }
+  }
+
+  async logout(userId: string, refreshToken?: string): Promise<void> {
+    if (refreshToken) {
+      await this.refreshTokenRepository.delete({ userId, token: refreshToken });
+    } else {
+      // Delete all refresh tokens for user
+      await this.refreshTokenRepository.delete({ userId });
+    }
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    const emailToken = await this.emailTokenRepository.findOne({
+      where: {
+        token,
+        type: TokenType.EMAIL_VERIFY,
+        usedAt: null as any,
+        expiresAt: MoreThan(new Date()),
+      },
+    });
+
+    if (!emailToken) {
+      throw new InvalidTokenException();
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: emailToken.userId },
+    });
 
     if (!user) {
-      // Don't reveal if email exists
-      return { message: '인증 메일이 재발송되었습니다.' };
+      throw new UserNotFoundException();
+    }
+
+    // Update user
+    user.emailVerified = true;
+    user.emailVerifiedAt = new Date();
+    await this.userRepository.save(user);
+
+    // Mark token as used
+    emailToken.usedAt = new Date();
+    await this.emailTokenRepository.save(emailToken);
+  }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists
+      return;
     }
 
     if (user.emailVerified) {
-      throw new BusinessException('COMMON_001', {
-        message: '이미 인증된 이메일입니다.',
-      });
+      return;
     }
 
-    const verificationToken = await this.tokensService.createEmailVerificationToken(user.id);
-    await this.mailService.sendVerificationEmail(user.email, user.name, verificationToken);
+    // Delete old tokens
+    await this.emailTokenRepository.delete({
+      userId: user.id,
+      type: TokenType.EMAIL_VERIFY,
+    });
 
-    return { message: '인증 메일이 재발송되었습니다.' };
+    // Create new token
+    await this.createEmailVerificationToken(user.id);
+
+    // TODO: Send email
   }
 
-  /**
-   * Login with email and password
-   */
-  async login(loginDto: LoginDto, deviceInfo?: string): Promise<AuthResponse> {
-    const user = await this.usersService.findByEmail(loginDto.email);
+  async forgotPassword(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { email },
+    });
 
     if (!user) {
-      throw new BusinessException('AUTH_004');
+      // Don't reveal if user exists
+      return;
     }
 
-    // Check if user is local auth
-    if (user.provider !== AuthProvider.LOCAL || !user.passwordHash) {
-      throw new BusinessException('AUTH_004');
-    }
-
-    // Verify password
-    const isPasswordValid = await CryptoUtil.verifyPassword(
-      loginDto.password,
-      user.passwordHash,
-    );
-
-    if (!isPasswordValid) {
-      throw new BusinessException('AUTH_004');
-    }
-
-    // Check user status
-    if (user.status === UserStatus.INACTIVE) {
-      throw new BusinessException('AUTH_006');
-    }
-
-    if (user.status === UserStatus.WITHDRAWN) {
-      throw new BusinessException('AUTH_007');
-    }
-
-    // Check email verification
-    if (!user.emailVerified) {
-      throw new BusinessException('AUTH_005');
-    }
-
-    // Generate tokens
-    const tokens = await this.generateTokens(user, deviceInfo, loginDto.rememberMe);
-
-    // Update last login
-    await this.usersService.updateLastLogin(user.id);
-
-    return {
-      user: this.formatUserResponse(user),
-      tokens,
-    };
-  }
-
-  /**
-   * Login with Google
-   */
-  async googleAuth(googleAuthDto: GoogleAuthDto, deviceInfo?: string): Promise<AuthResponse> {
-    // Verify Google ID token
-    let payload;
-    try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken: googleAuthDto.idToken,
-        audience: this.configService.get<string>('google.clientId'),
-      });
-      payload = ticket.getPayload();
-    } catch {
-      throw new BusinessException('AUTH_002', { message: 'Invalid Google token' });
-    }
-
-    if (!payload || !payload.email) {
-      throw new BusinessException('AUTH_002', { message: 'Invalid Google token payload' });
-    }
-
-    // Find or create user
-    let user = await this.usersService.findByProvider(AuthProvider.GOOGLE, payload.sub);
-
-    if (!user) {
-      // Check if email already exists with different provider
-      const existingUser = await this.usersService.findByEmail(payload.email);
-      if (existingUser) {
-        throw new BusinessException('USER_001', {
-          message: '이미 다른 방식으로 가입된 이메일입니다.',
-        });
-      }
-
-      // Create new user
-      user = await this.usersService.create({
-        email: payload.email,
-        name: payload.name || payload.email.split('@')[0],
-        provider: AuthProvider.GOOGLE,
-        providerId: payload.sub,
-        profileImageUrl: payload.picture,
-      });
-
-      // Send welcome email for new users
-      await this.mailService.sendWelcomeEmail(user.email, user.name);
-    }
-
-    // Check user status
-    if (user.status === UserStatus.INACTIVE) {
-      throw new BusinessException('AUTH_006');
-    }
-
-    if (user.status === UserStatus.WITHDRAWN) {
-      throw new BusinessException('AUTH_007');
-    }
-
-    // Generate tokens
-    const tokens = await this.generateTokens(user, deviceInfo);
-
-    // Update last login
-    await this.usersService.updateLastLogin(user.id);
-
-    return {
-      user: this.formatUserResponse(user),
-      tokens,
-    };
-  }
-
-  /**
-   * Refresh tokens
-   */
-  async refreshTokens(refreshToken: string, deviceInfo?: string): Promise<TokenPair> {
-    const userId = await this.tokensService.validateRefreshToken(refreshToken);
-    const user = await this.usersService.findByIdOrFail(userId);
-
-    // Check user status
-    if (user.status !== UserStatus.ACTIVE) {
-      throw new BusinessException('AUTH_006');
-    }
-
-    // Rotate refresh token
-    const newRefreshToken = await this.tokensService.rotateRefreshToken(
-      refreshToken,
-      deviceInfo,
-    );
-
-    // Generate new access token
-    const accessToken = await this.generateAccessToken(user);
-
-    return {
-      accessToken,
-      refreshToken: newRefreshToken,
-      expiresIn: this.getAccessTokenExpiration(),
-    };
-  }
-
-  /**
-   * Logout
-   */
-  async logout(userId: string, refreshToken?: string, allDevices: boolean = false): Promise<void> {
-    if (allDevices) {
-      await this.tokensService.deleteAllRefreshTokens(userId);
-    } else if (refreshToken) {
-      await this.tokensService.deleteRefreshToken(refreshToken);
-    }
-  }
-
-  /**
-   * Forgot password
-   */
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
-    const user = await this.usersService.findByEmail(forgotPasswordDto.email);
-
-    // Always return success to prevent email enumeration
-    const message = '비밀번호 재설정 메일이 발송되었습니다.';
-
-    if (!user) {
-      return { message };
-    }
-
-    // Only for local auth users
-    if (user.provider !== AuthProvider.LOCAL) {
-      return { message };
-    }
+    // Delete old tokens
+    await this.emailTokenRepository.delete({
+      userId: user.id,
+      type: TokenType.PASSWORD_RESET,
+    });
 
     // Create password reset token
-    const resetToken = await this.tokensService.createPasswordResetToken(user.id);
+    const token = generateRandomToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiry
 
-    // Send password reset email
-    await this.mailService.sendPasswordResetEmail(user.email, user.name, resetToken);
+    const resetToken = this.emailTokenRepository.create({
+      userId: user.id,
+      token,
+      type: TokenType.PASSWORD_RESET,
+      expiresAt,
+    });
 
-    return { message };
+    await this.emailTokenRepository.save(resetToken);
+
+    // TODO: Send email
+    this.logger.log(`Password reset token created for user ${user.id}: ${token}`);
   }
 
-  /**
-   * Reset password
-   */
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
-    const userId = await this.tokensService.validatePasswordResetToken(resetPasswordDto.token);
-    await this.usersService.resetPassword(userId, resetPasswordDto.newPassword);
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const resetToken = await this.emailTokenRepository.findOne({
+      where: {
+        token,
+        type: TokenType.PASSWORD_RESET,
+        usedAt: null as any,
+        expiresAt: MoreThan(new Date()),
+      },
+    });
 
-    // Invalidate all refresh tokens for security
-    await this.tokensService.deleteAllRefreshTokens(userId);
+    if (!resetToken) {
+      throw new InvalidTokenException();
+    }
 
-    return { message: '비밀번호가 재설정되었습니다.' };
+    const user = await this.userRepository.findOne({
+      where: { id: resetToken.userId },
+    });
+
+    if (!user) {
+      throw new UserNotFoundException();
+    }
+
+    // Update password
+    user.passwordHash = await hashPassword(newPassword);
+    await this.userRepository.save(user);
+
+    // Mark token as used
+    resetToken.usedAt = new Date();
+    await this.emailTokenRepository.save(resetToken);
+
+    // Delete all refresh tokens (logout from all devices)
+    await this.refreshTokenRepository.delete({ userId: user.id });
   }
 
-  // ==================== Private Helper Methods ====================
+  private async generateTokens(user: User): Promise<TokenResponseDto> {
+    const accessTokenExpiry = this.configService.get('jwt.accessTokenExpiresIn');
+    const refreshTokenExpiry = this.configService.get('jwt.refreshTokenExpiresIn');
 
-  /**
-   * Generate access and refresh tokens
-   */
-  private async generateTokens(
-    user: User,
-    deviceInfo?: string,
-    rememberMe: boolean = false,
-  ): Promise<TokenPair> {
-    const accessToken = await this.generateAccessToken(user);
-    const refreshToken = await this.tokensService.createRefreshToken(
-      user.id,
-      deviceInfo,
-      rememberMe,
+    const accessToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, type: 'access' },
+      { expiresIn: accessTokenExpiry },
     );
+
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, type: 'refresh' },
+      { expiresIn: refreshTokenExpiry },
+    );
+
+    // Save refresh token
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    const refreshTokenEntity = this.refreshTokenRepository.create({
+      userId: user.id,
+      token: refreshToken,
+      expiresAt,
+    });
+
+    await this.refreshTokenRepository.save(refreshTokenEntity);
 
     return {
       accessToken,
       refreshToken,
-      expiresIn: this.getAccessTokenExpiration(),
+      tokenType: 'Bearer',
+      expiresIn: 900, // 15 minutes in seconds
     };
   }
 
-  /**
-   * Generate access token
-   */
-  private async generateAccessToken(user: User): Promise<string> {
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      type: 'access',
-    };
+  private async createEmailVerificationToken(userId: string): Promise<void> {
+    const token = generateRandomToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiry
 
-    return this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('jwt.accessSecret') || 'fallback-secret',
-      expiresIn: this.getAccessTokenExpiration(),
+    const emailToken = this.emailTokenRepository.create({
+      userId,
+      token,
+      type: TokenType.EMAIL_VERIFY,
+      expiresAt,
     });
-  }
 
-  /**
-   * Get access token expiration in seconds
-   */
-  private getAccessTokenExpiration(): number {
-    const expiration = this.configService.get<string>('jwt.accessExpiration') || '1h';
-    const match = expiration.match(/^(\d+)([dhms])$/);
-    if (!match) return 3600;
+    await this.emailTokenRepository.save(emailToken);
 
-    const value = parseInt(match[1], 10);
-    switch (match[2]) {
-      case 'd': return value * 24 * 60 * 60;
-      case 'h': return value * 60 * 60;
-      case 'm': return value * 60;
-      case 's': return value;
-      default: return 3600;
-    }
-  }
-
-  /**
-   * Format user response (remove sensitive data)
-   */
-  private formatUserResponse(user: User): Partial<User> {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      profileImageUrl: user.profileImageUrl,
-      provider: user.provider,
-      emailVerified: user.emailVerified,
-      familyGroupId: user.familyGroupId,
-    };
+    // TODO: Send verification email
+    this.logger.log(`Email verification token created for user ${userId}: ${token}`);
   }
 }

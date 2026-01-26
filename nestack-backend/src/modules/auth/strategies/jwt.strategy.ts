@@ -1,42 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { UsersService } from '../../users/users.service';
-import { BusinessException } from '../../../common/exceptions/business.exception';
-import { UserStatus } from '../../../common/enums';
-import { JwtPayload } from '../../../common/interfaces';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../../../database/entities';
+
+export interface JwtPayload {
+  sub: string;
+  email: string;
+  type: 'access' | 'refresh';
+}
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private configService: ConfigService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('jwt.accessSecret') || 'fallback-secret',
+      secretOrKey: configService.get<string>('jwt.secret')!,
     });
   }
 
   async validate(payload: JwtPayload) {
     if (payload.type !== 'access') {
-      throw new BusinessException('AUTH_002');
+      throw new UnauthorizedException('Invalid token type');
     }
 
-    const user = await this.usersService.findById(payload.sub);
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+      relations: ['familyGroup'],
+    });
 
     if (!user) {
-      throw new BusinessException('USER_003');
-    }
-
-    if (user.status === UserStatus.INACTIVE) {
-      throw new BusinessException('AUTH_006');
-    }
-
-    if (user.status === UserStatus.WITHDRAWN) {
-      throw new BusinessException('AUTH_007');
+      throw new UnauthorizedException('User not found');
     }
 
     return user;

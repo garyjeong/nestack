@@ -1,327 +1,373 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { FamilyGroup } from './entities/family-group.entity';
-import { InviteCode } from './entities/invite-code.entity';
-import { User } from '../users/entities/user.entity';
-import { JoinFamilyDto, UpdateShareSettingsDto } from './dto';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { InviteCodeUtil } from '../../common/utils';
-import { FamilyGroupStatus, InviteCodeStatus } from '../../common/enums';
+import { Repository, MoreThan } from 'typeorm';
+import {
+  User,
+  FamilyGroup,
+  InviteCode,
+  BankAccount,
+  Mission,
+} from '../../database/entities';
+import {
+  FamilyStatus,
+  InviteCodeStatus,
+  ShareStatus,
+} from '../../common/enums';
+import {
+  FamilyGroupNotFoundException,
+  AlreadyInFamilyGroupException,
+  InvalidInviteCodeException,
+  UnauthorizedAccessException,
+} from '../../common/exceptions/business.exception';
+import {
+  generateInviteCode,
+  formatInviteCode,
+  normalizeInviteCode,
+} from '../../common/utils/invite-code.util';
+import {
+  JoinFamilyDto,
+  UpdateShareSettingsDto,
+  FamilyResponseDto,
+  InviteCodeResponseDto,
+  ShareSettingsResponseDto,
+} from './dto';
 
 @Injectable()
 export class FamilyService {
-  private readonly logger = new Logger(FamilyService.name);
-
   constructor(
-    @InjectRepository(FamilyGroup)
-    private readonly familyGroupRepository: Repository<FamilyGroup>,
-    @InjectRepository(InviteCode)
-    private readonly inviteCodeRepository: Repository<InviteCode>,
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private userRepository: Repository<User>,
+    @InjectRepository(FamilyGroup)
+    private familyGroupRepository: Repository<FamilyGroup>,
+    @InjectRepository(InviteCode)
+    private inviteCodeRepository: Repository<InviteCode>,
+    @InjectRepository(BankAccount)
+    private bankAccountRepository: Repository<BankAccount>,
+    @InjectRepository(Mission)
+    private missionRepository: Repository<Mission>,
   ) {}
 
-  async createFamilyGroup(userId: string): Promise<{ familyGroup: FamilyGroup; inviteCode: string }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  async createFamily(userId: string): Promise<FamilyResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
     if (!user) {
-      throw new BusinessException('USER_003');
+      throw new FamilyGroupNotFoundException();
     }
 
     if (user.familyGroupId) {
-      throw new BusinessException('FAMILY_001', {
-        message: '이미 가족 그룹에 속해 있습니다.',
-      });
+      throw new AlreadyInFamilyGroupException();
     }
 
+    // Create family group
     const familyGroup = this.familyGroupRepository.create({
       createdBy: userId,
-      status: FamilyGroupStatus.ACTIVE,
+      status: FamilyStatus.ACTIVE,
     });
+
     await this.familyGroupRepository.save(familyGroup);
 
-    await this.userRepository.update(userId, { familyGroupId: familyGroup.id });
+    // Update user
+    user.familyGroupId = familyGroup.id;
+    await this.userRepository.save(user);
 
-    const inviteCode = await this.createInviteCode(userId, familyGroup.id);
+    // Create initial invite code
+    await this.createInviteCode(familyGroup.id, userId);
 
-    return { familyGroup, inviteCode: inviteCode.code };
-  }
-
-  async createInviteCode(userId: string, familyGroupId: string): Promise<InviteCode> {
-    await this.inviteCodeRepository.update(
-      { familyGroupId, status: InviteCodeStatus.PENDING },
-      { status: InviteCodeStatus.EXPIRED },
-    );
-
-    let code: string;
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    do {
-      code = InviteCodeUtil.generate();
-      const existing = await this.inviteCodeRepository.findOne({ where: { code } });
-      if (!existing) break;
-      attempts++;
-    } while (attempts < maxAttempts);
-
-    if (attempts >= maxAttempts) {
-      throw new BusinessException('FAMILY_002', {
-        message: '초대 코드 생성에 실패했습니다. 다시 시도해주세요.',
-      });
-    }
-
-    const inviteCode = this.inviteCodeRepository.create({
-      code,
-      familyGroupId,
-      createdBy: userId,
-      status: InviteCodeStatus.PENDING,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    // Load with members
+    const savedGroup = await this.familyGroupRepository.findOne({
+      where: { id: familyGroup.id },
+      relations: ['members'],
     });
 
-    await this.inviteCodeRepository.save(inviteCode);
-    return inviteCode;
+    return FamilyResponseDto.fromEntity(savedGroup!);
   }
 
-  async getActiveInviteCode(userId: string): Promise<InviteCode | null> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user?.familyGroupId) {
-      return null;
-    }
-
-    const inviteCode = await this.inviteCodeRepository.findOne({
-      where: {
-        familyGroupId: user.familyGroupId,
-        status: InviteCodeStatus.PENDING,
-      },
-      order: { createdAt: 'DESC' },
+  async getFamily(userId: string): Promise<FamilyResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
     });
 
-    if (inviteCode && inviteCode.expiresAt < new Date()) {
-      await this.inviteCodeRepository.update(inviteCode.id, {
-        status: InviteCodeStatus.EXPIRED,
-      });
-      return null;
+    if (!user || !user.familyGroupId) {
+      throw new FamilyGroupNotFoundException();
     }
 
-    return inviteCode;
-  }
-
-  async regenerateInviteCode(userId: string): Promise<InviteCode> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user?.familyGroupId) {
-      throw new BusinessException('FAMILY_003', {
-        message: '가족 그룹에 속해 있지 않습니다.',
-      });
-    }
-
-    return this.createInviteCode(userId, user.familyGroupId);
-  }
-
-  async joinFamily(userId: string, joinFamilyDto: JoinFamilyDto): Promise<FamilyGroup> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new BusinessException('USER_003');
-    }
-
-    if (user.familyGroupId) {
-      throw new BusinessException('FAMILY_001', {
-        message: '이미 가족 그룹에 속해 있습니다.',
-      });
-    }
-
-    const inviteCode = await this.inviteCodeRepository.findOne({
-      where: { code: joinFamilyDto.inviteCode.toUpperCase() },
-      relations: ['familyGroup'],
-    });
-
-    if (!inviteCode) {
-      throw new BusinessException('FAMILY_004', {
-        message: '유효하지 않은 초대 코드입니다.',
-      });
-    }
-
-    if (inviteCode.status !== InviteCodeStatus.PENDING) {
-      throw new BusinessException('FAMILY_004', {
-        message: '이미 사용되었거나 만료된 초대 코드입니다.',
-      });
-    }
-
-    if (inviteCode.expiresAt < new Date()) {
-      await this.inviteCodeRepository.update(inviteCode.id, {
-        status: InviteCodeStatus.EXPIRED,
-      });
-      throw new BusinessException('FAMILY_004', {
-        message: '만료된 초대 코드입니다.',
-      });
-    }
-
-    if (inviteCode.familyGroup.status !== FamilyGroupStatus.ACTIVE) {
-      throw new BusinessException('FAMILY_005', {
-        message: '비활성화된 가족 그룹입니다.',
-      });
-    }
-
-    const memberCount = await this.userRepository.count({
-      where: { familyGroupId: inviteCode.familyGroupId },
-    });
-
-    if (memberCount >= 2) {
-      throw new BusinessException('FAMILY_006', {
-        message: '가족 그룹이 이미 가득 찼습니다. (최대 2명)',
-      });
-    }
-
-    await this.userRepository.update(userId, { familyGroupId: inviteCode.familyGroupId });
-
-    await this.inviteCodeRepository.update(inviteCode.id, {
-      status: InviteCodeStatus.USED,
-      usedBy: userId,
-      usedAt: new Date(),
-    });
-
-    return this.getFamilyGroup(inviteCode.familyGroupId);
-  }
-
-  async getFamilyGroup(familyGroupId: string): Promise<FamilyGroup> {
     const familyGroup = await this.familyGroupRepository.findOne({
-      where: { id: familyGroupId },
+      where: { id: user.familyGroupId },
       relations: ['members'],
     });
 
     if (!familyGroup) {
-      throw new BusinessException('FAMILY_003', {
-        message: '가족 그룹을 찾을 수 없습니다.',
-      });
+      throw new FamilyGroupNotFoundException();
     }
 
-    return familyGroup;
-  }
-
-  async getFamilyInfo(userId: string): Promise<{
-    familyGroup: FamilyGroup | null;
-    partner: Partial<User> | null;
-    inviteCode: string | null;
-  }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user?.familyGroupId) {
-      return { familyGroup: null, partner: null, inviteCode: null };
-    }
-
-    const familyGroup = await this.getFamilyGroup(user.familyGroupId);
-
-    const partner = familyGroup.members.find((member) => member.id !== userId);
-    const partnerInfo = partner
-      ? {
-          id: partner.id,
-          name: partner.name,
-          email: partner.email,
-          profileImageUrl: partner.profileImageUrl,
-        }
-      : null;
-
-    const inviteCode =
-      familyGroup.members.length < 2 ? (await this.getActiveInviteCode(userId))?.code || null : null;
-
-    const sanitizedMembers = familyGroup.members.map((m) => {
-      const { passwordHash, ...rest } = m;
-      return rest;
-    });
-
-    return {
-      familyGroup: {
-        ...familyGroup,
-        members: sanitizedMembers as unknown as User[],
-      },
-      partner: partnerInfo,
-      inviteCode,
-    };
+    return FamilyResponseDto.fromEntity(familyGroup);
   }
 
   async leaveFamily(userId: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user?.familyGroupId) {
-      throw new BusinessException('FAMILY_003', {
-        message: '가족 그룹에 속해 있지 않습니다.',
-      });
-    }
-
-    const familyGroupId = user.familyGroupId;
-
-    const memberCount = await this.userRepository.count({
-      where: { familyGroupId },
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
     });
 
-    await this.userRepository.update(userId, { familyGroupId: null });
+    if (!user || !user.familyGroupId) {
+      throw new FamilyGroupNotFoundException();
+    }
 
-    if (memberCount <= 1) {
-      await this.familyGroupRepository.update(familyGroupId, {
-        status: FamilyGroupStatus.DISSOLVED,
-      });
+    const familyGroup = await this.familyGroupRepository.findOne({
+      where: { id: user.familyGroupId },
+      relations: ['members'],
+    });
 
-      await this.inviteCodeRepository.update(
-        { familyGroupId, status: InviteCodeStatus.PENDING },
-        { status: InviteCodeStatus.EXPIRED },
-      );
+    if (!familyGroup) {
+      throw new FamilyGroupNotFoundException();
+    }
+
+    // Remove user from family
+    user.familyGroupId = null as any;
+    await this.userRepository.save(user);
+
+    // If user was the owner and there are other members, transfer ownership
+    if (familyGroup.createdBy === userId && familyGroup.members.length > 1) {
+      const newOwner = familyGroup.members.find((m) => m.id !== userId);
+      if (newOwner) {
+        familyGroup.createdBy = newOwner.id;
+        await this.familyGroupRepository.save(familyGroup);
+      }
+    }
+
+    // If no members left, mark family as inactive
+    const remainingMembers = await this.userRepository.count({
+      where: { familyGroupId: familyGroup.id },
+    });
+
+    if (remainingMembers === 0) {
+      familyGroup.status = FamilyStatus.INACTIVE;
+      await this.familyGroupRepository.save(familyGroup);
     }
   }
 
-  async getShareSettings(userId: string) {
+  async joinFamily(userId: string, dto: JoinFamilyDto): Promise<FamilyResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['bankAccounts'],
     });
 
-    if (!user?.familyGroupId) {
-      return [];
+    if (!user) {
+      throw new FamilyGroupNotFoundException();
     }
 
-    if (!user?.bankAccounts) {
-      return [];
+    if (user.familyGroupId) {
+      throw new AlreadyInFamilyGroupException();
     }
 
-    const accounts = user.bankAccounts.map((account) => ({
-      id: account.id,
-      bankName: account.bankName,
-      accountNumberMasked: account.accountNumberMasked,
-      balance: account.balance,
-      shareStatus: account.shareStatus,
-      isHidden: account.isHidden,
-    }));
+    const normalizedCode = normalizeInviteCode(dto.code);
 
-    return accounts;
+    const inviteCode = await this.inviteCodeRepository.findOne({
+      where: {
+        code: normalizedCode,
+        status: InviteCodeStatus.PENDING,
+        expiresAt: MoreThan(new Date()),
+      },
+    });
+
+    if (!inviteCode) {
+      throw new InvalidInviteCodeException();
+    }
+
+    // Join family
+    user.familyGroupId = inviteCode.familyGroupId;
+    await this.userRepository.save(user);
+
+    // Mark invite code as used
+    inviteCode.status = InviteCodeStatus.USED;
+    inviteCode.usedBy = userId;
+    inviteCode.usedAt = new Date();
+    await this.inviteCodeRepository.save(inviteCode);
+
+    // Load family with members
+    const familyGroup = await this.familyGroupRepository.findOne({
+      where: { id: inviteCode.familyGroupId },
+      relations: ['members'],
+    });
+
+    return FamilyResponseDto.fromEntity(familyGroup!);
+  }
+
+  async getInviteCode(userId: string): Promise<InviteCodeResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user || !user.familyGroupId) {
+      throw new FamilyGroupNotFoundException();
+    }
+
+    // Find active invite code
+    let inviteCode = await this.inviteCodeRepository.findOne({
+      where: {
+        familyGroupId: user.familyGroupId,
+        status: InviteCodeStatus.PENDING,
+        expiresAt: MoreThan(new Date()),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    // Create new if not found
+    if (!inviteCode) {
+      inviteCode = await this.createInviteCode(user.familyGroupId, userId);
+    }
+
+    return {
+      code: inviteCode.code,
+      formattedCode: formatInviteCode(inviteCode.code),
+      expiresAt: inviteCode.expiresAt,
+    };
+  }
+
+  async regenerateInviteCode(userId: string): Promise<InviteCodeResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user || !user.familyGroupId) {
+      throw new FamilyGroupNotFoundException();
+    }
+
+    // Expire old codes
+    await this.inviteCodeRepository.update(
+      {
+        familyGroupId: user.familyGroupId,
+        status: InviteCodeStatus.PENDING,
+      },
+      { status: InviteCodeStatus.EXPIRED },
+    );
+
+    // Create new code
+    const inviteCode = await this.createInviteCode(user.familyGroupId, userId);
+
+    return {
+      code: inviteCode.code,
+      formattedCode: formatInviteCode(inviteCode.code),
+      expiresAt: inviteCode.expiresAt,
+    };
+  }
+
+  async getShareSettings(userId: string): Promise<ShareSettingsResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user || !user.familyGroupId) {
+      throw new FamilyGroupNotFoundException();
+    }
+
+    // Get shared accounts
+    const sharedAccounts = await this.bankAccountRepository.find({
+      where: {
+        userId,
+        shareStatus: ShareStatus.SHARED,
+      },
+      select: ['id'],
+    });
+
+    // Get shared missions
+    const sharedMissions = await this.missionRepository.find({
+      where: {
+        userId,
+        familyGroupId: user.familyGroupId,
+      },
+      select: ['id'],
+    });
+
+    return {
+      sharedAccountIds: sharedAccounts.map((a) => a.id),
+      sharedMissionIds: sharedMissions.map((m) => m.id),
+    };
   }
 
   async updateShareSettings(
     userId: string,
-    updateShareSettingsDto: UpdateShareSettingsDto,
-  ): Promise<{ message: string; updatedAccounts: any[] }> {
+    dto: UpdateShareSettingsDto,
+  ): Promise<ShareSettingsResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ['bankAccounts'],
     });
 
-    if (!user?.familyGroupId) {
-      throw new BusinessException('FAMILY_003', {
-        message: '가족 그룹에 속해 있지 않습니다.',
-      });
+    if (!user || !user.familyGroupId) {
+      throw new FamilyGroupNotFoundException();
     }
 
-    const { accounts } = updateShareSettingsDto;
+    // Update account sharing
+    if (dto.shareAllAccounts !== undefined) {
+      await this.bankAccountRepository.update(
+        { userId },
+        { shareStatus: dto.shareAllAccounts ? ShareStatus.SHARED : ShareStatus.PRIVATE },
+      );
+    } else if (dto.sharedAccountIds) {
+      // Reset all to private first
+      await this.bankAccountRepository.update(
+        { userId },
+        { shareStatus: ShareStatus.PRIVATE },
+      );
 
-    const updatePromises = accounts.map((accountUpdate) =>
-      this.userRepository.update(
-        accountUpdate.accountId,
-        { shareStatus: accountUpdate.shareStatus },
-      ),
-    );
+      // Set specific accounts to shared
+      if (dto.sharedAccountIds.length > 0) {
+        await this.bankAccountRepository
+          .createQueryBuilder()
+          .update()
+          .set({ shareStatus: ShareStatus.SHARED })
+          .where('id IN (:...ids) AND user_id = :userId', {
+            ids: dto.sharedAccountIds,
+            userId,
+          })
+          .execute();
+      }
+    }
 
-    await Promise.all(updatePromises);
+    // Update mission sharing
+    if (dto.shareAllMissions !== undefined) {
+      const updateData = dto.shareAllMissions
+        ? { familyGroupId: user.familyGroupId }
+        : { familyGroupId: null as any };
 
-    const updatedAccounts = await this.getShareSettings(userId);
+      await this.missionRepository.update({ userId }, updateData);
+    } else if (dto.sharedMissionIds) {
+      // Reset all missions' family group
+      await this.missionRepository.update({ userId }, { familyGroupId: null as any });
 
-    return {
-      message: '공유 설정이 변경되었습니다.',
-      updatedAccounts,
-    };
+      // Set specific missions to shared
+      if (dto.sharedMissionIds.length > 0) {
+        await this.missionRepository
+          .createQueryBuilder()
+          .update()
+          .set({ familyGroupId: user.familyGroupId })
+          .where('id IN (:...ids) AND user_id = :userId', {
+            ids: dto.sharedMissionIds,
+            userId,
+          })
+          .execute();
+      }
+    }
+
+    return this.getShareSettings(userId);
+  }
+
+  private async createInviteCode(
+    familyGroupId: string,
+    createdBy: string,
+  ): Promise<InviteCode> {
+    const code = generateInviteCode();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+    const inviteCode = this.inviteCodeRepository.create({
+      code,
+      familyGroupId,
+      createdBy,
+      status: InviteCodeStatus.PENDING,
+      expiresAt,
+    });
+
+    return this.inviteCodeRepository.save(inviteCode);
   }
 }

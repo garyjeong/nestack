@@ -7,160 +7,132 @@ import {
   Body,
   Param,
   Query,
-  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { MissionsService } from './missions.service';
 import {
   CreateMissionDto,
   UpdateMissionDto,
+  MissionFilterDto,
+  MissionResponseDto,
+  MissionSummaryDto,
+  CategoryResponseDto,
   UpdateMissionStatusDto,
-  MissionQueryDto,
-  LinkTransactionDto,
+  LinkTransactionsDto,
 } from './dto';
-import { CurrentUser } from '../../common/decorators';
-import { User } from '../users/entities/user.entity';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User, MissionTemplate } from '../../database/entities';
+import { PaginatedResponse } from '../../common/dto/api-response.dto';
 
-@ApiTags('missions')
-@ApiBearerAuth('JWT-auth')
-@Controller({ path: 'missions', version: '1' })
+@ApiTags('Missions')
+@ApiBearerAuth()
+@Controller('missions')
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
 
   @Get('categories')
-  @ApiOperation({ summary: '생애주기 카테고리 목록 조회' })
-  @ApiResponse({ status: 200, description: '카테고리 목록 반환' })
-  async getCategories() {
-    const categories = await this.missionsService.getCategories();
-    return { categories };
+  @ApiOperation({ summary: 'Get all lifecycle categories' })
+  @ApiResponse({ status: 200, description: 'Categories retrieved' })
+  async getCategories(): Promise<CategoryResponseDto[]> {
+    return this.missionsService.getCategories();
   }
 
   @Get('templates')
-  @ApiOperation({ summary: '미션 템플릿 목록 조회' })
-  @ApiResponse({ status: 200, description: '템플릿 목록 반환' })
-  async getTemplates(@Query('categoryId') categoryId?: string) {
-    const templates = await this.missionsService.getTemplates(categoryId);
-    return { templates };
+  @ApiOperation({ summary: 'Get mission templates' })
+  @ApiResponse({ status: 200, description: 'Templates retrieved' })
+  async getTemplates(
+    @Query('categoryId') categoryId?: string,
+  ): Promise<MissionTemplate[]> {
+    return this.missionsService.getTemplates(categoryId);
   }
 
   @Post()
-  @ApiOperation({ summary: '미션 생성' })
-  @ApiResponse({ status: 201, description: '미션 생성 성공' })
-  @ApiResponse({ status: 400, description: '유효하지 않은 데이터' })
-  async create(
+  @ApiOperation({ summary: 'Create a new mission' })
+  @ApiResponse({ status: 201, description: 'Mission created' })
+  async createMission(
     @CurrentUser() user: User,
-    @Body() createMissionDto: CreateMissionDto,
-  ) {
-    const mission = await this.missionsService.create(
-      user.id,
-      createMissionDto,
-      user.familyGroupId,
-    );
-    return { mission, message: '미션이 생성되었습니다.' };
+    @Body() dto: CreateMissionDto,
+  ): Promise<MissionResponseDto> {
+    return this.missionsService.createMission(user.id, dto);
   }
 
   @Get()
-  @ApiOperation({ summary: '미션 목록 조회' })
-  @ApiResponse({ status: 200, description: '미션 목록 반환' })
-  async findAll(
+  @ApiOperation({ summary: 'Get all missions with filters' })
+  @ApiResponse({ status: 200, description: 'Missions retrieved' })
+  async getMissions(
     @CurrentUser() user: User,
-    @Query() query: MissionQueryDto,
-  ) {
-    const missions = await this.missionsService.findAll(
-      user.id,
-      query,
-      user.familyGroupId,
-    );
-    return { missions };
+    @Query() filters: MissionFilterDto,
+  ): Promise<PaginatedResponse<MissionResponseDto>> {
+    return this.missionsService.getMissions(user.id, filters);
   }
 
   @Get('summary')
-  @ApiOperation({ summary: '미션 진행 요약 조회' })
-  @ApiResponse({ status: 200, description: '미션 진행 요약 반환' })
-  async getProgressSummary(@CurrentUser() user: User) {
-    const summary = await this.missionsService.getProgressSummary(
-      user.id,
-      user.familyGroupId,
-    );
-    return { summary };
+  @ApiOperation({ summary: 'Get mission summary statistics' })
+  @ApiResponse({ status: 200, description: 'Summary retrieved' })
+  async getMissionSummary(@CurrentUser() user: User): Promise<MissionSummaryDto> {
+    return this.missionsService.getMissionSummary(user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '미션 상세 조회' })
-  @ApiParam({ name: 'id', description: '미션 ID' })
-  @ApiResponse({ status: 200, description: '미션 상세 정보 반환' })
-  @ApiResponse({ status: 404, description: '미션을 찾을 수 없음' })
-  async findOne(
+  @ApiOperation({ summary: 'Get mission by ID' })
+  @ApiResponse({ status: 200, description: 'Mission retrieved' })
+  @ApiResponse({ status: 404, description: 'Mission not found' })
+  async getMission(
     @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    const mission = await this.missionsService.findById(id, user.id);
-    return {
-      mission: {
-        ...mission,
-        progressPercent: mission.progressPercent,
-      },
-    };
+    @Param('id') id: string,
+  ): Promise<MissionResponseDto> {
+    return this.missionsService.getMission(user.id, id);
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: '미션 수정' })
-  @ApiParam({ name: 'id', description: '미션 ID' })
-  @ApiResponse({ status: 200, description: '미션 수정 성공' })
-  @ApiResponse({ status: 404, description: '미션을 찾을 수 없음' })
-  async update(
+  @ApiOperation({ summary: 'Update mission' })
+  @ApiResponse({ status: 200, description: 'Mission updated' })
+  @ApiResponse({ status: 404, description: 'Mission not found' })
+  async updateMission(
     @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateMissionDto: UpdateMissionDto,
-  ) {
-    const mission = await this.missionsService.update(id, user.id, updateMissionDto);
-    return { mission, message: '미션이 수정되었습니다.' };
-  }
-
-  @Post(':id/status')
-  @ApiOperation({ summary: '미션 상태 변경' })
-  @ApiParam({ name: 'id', description: '미션 ID' })
-  @ApiResponse({ status: 200, description: '미션 상태 변경 성공' })
-  @ApiResponse({ status: 400, description: '유효하지 않은 상태 전환' })
-  async updateStatus(
-    @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateStatusDto: UpdateMissionStatusDto,
-  ) {
-    const mission = await this.missionsService.updateStatus(id, user.id, updateStatusDto);
-    return { mission, message: '미션 상태가 변경되었습니다.' };
+    @Param('id') id: string,
+    @Body() dto: UpdateMissionDto,
+  ): Promise<MissionResponseDto> {
+    return this.missionsService.updateMission(user.id, id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: '미션 삭제' })
-  @ApiParam({ name: 'id', description: '미션 ID' })
-  @ApiResponse({ status: 200, description: '미션 삭제 성공' })
-  @ApiResponse({ status: 404, description: '미션을 찾을 수 없음' })
-  async delete(
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete mission' })
+  @ApiResponse({ status: 200, description: 'Mission deleted' })
+  @ApiResponse({ status: 404, description: 'Mission not found' })
+  async deleteMission(
     @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    await this.missionsService.delete(id, user.id);
-    return { message: '미션이 삭제되었습니다.' };
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    await this.missionsService.deleteMission(user.id, id);
+    return { message: 'Mission deleted successfully' };
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Update mission status' })
+  @ApiResponse({ status: 200, description: 'Status updated' })
+  @ApiResponse({ status: 404, description: 'Mission not found' })
+  async updateMissionStatus(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() dto: UpdateMissionStatusDto,
+  ): Promise<MissionResponseDto> {
+    return this.missionsService.updateMissionStatus(user.id, id, dto);
   }
 
   @Post(':id/transactions')
-  @ApiOperation({ summary: '거래 내역 미션에 연결' })
-  @ApiParam({ name: 'id', description: '미션 ID' })
-  @ApiResponse({ status: 200, description: '거래 연결 성공' })
-  @ApiResponse({ status: 404, description: '미션 또는 거래를 찾을 수 없음' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Link transactions to mission' })
+  @ApiResponse({ status: 200, description: 'Transactions linked' })
+  @ApiResponse({ status: 404, description: 'Mission not found' })
   async linkTransactions(
     @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() linkDto: LinkTransactionDto,
-  ) {
-    const mission = await this.missionsService.linkTransactions(id, user.id, linkDto);
-    return { mission, message: '거래가 미션에 연결되었습니다.' };
+    @Param('id') id: string,
+    @Body() dto: LinkTransactionsDto,
+  ): Promise<MissionResponseDto> {
+    return this.missionsService.linkTransactions(user.id, id, dto);
   }
 }

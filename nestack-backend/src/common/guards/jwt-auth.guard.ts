@@ -1,10 +1,11 @@
-import { ExecutionContext, Injectable } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import {
+  Injectable,
+  ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Observable } from 'rxjs';
+import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { IS_ADMIN_ROUTE_KEY } from '../decorators/admin-route.decorator';
-import { BusinessException } from '../exceptions/business.exception';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -12,9 +13,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  canActivate(context: ExecutionContext) {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -24,34 +23,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return true;
     }
 
-    // Skip for admin routes - they use their own AdminJwtGuard
-    const isAdminRoute = this.reflector.getAllAndOverride<boolean>(IS_ADMIN_ROUTE_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (isAdminRoute) {
-      return true;
-    }
-
     return super.canActivate(context);
   }
 
-  handleRequest<TUser = unknown>(
-    err: Error | null,
-    user: TUser | false,
-    info: Error | undefined,
-  ): TUser {
+  handleRequest(err: any, user: any, info: any) {
     if (err || !user) {
-      if (info?.name === 'TokenExpiredError') {
-        throw new BusinessException('AUTH_001');
-      }
-      if (info?.name === 'JsonWebTokenError') {
-        throw new BusinessException('AUTH_002');
-      }
-      throw new BusinessException('AUTH_003');
+      throw err || new UnauthorizedException('Invalid or expired token');
     }
-
     return user;
   }
 }

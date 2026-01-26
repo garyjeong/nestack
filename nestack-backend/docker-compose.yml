@@ -1,54 +1,46 @@
-version: '3.8'
-
 services:
-  postgres:
+  db:
     image: postgres:16-alpine
     container_name: nestack-postgres
     restart: unless-stopped
     ports:
-      - '5432:5432'
+      - '5433:5432'
     environment:
       POSTGRES_USER: nestack
-      POSTGRES_PASSWORD: nestack_dev_password
+      POSTGRES_PASSWORD: nestack
       POSTGRES_DB: nestack_db
-      TZ: Asia/Seoul
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U nestack -d nestack_db']
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Redis for session/cache (optional, for production)
-  redis:
-    image: redis:7-alpine
-    container_name: nestack-redis
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestack-api
     restart: unless-stopped
     ports:
-      - '6379:6379'
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Adminer for database management (development only)
-  adminer:
-    image: adminer:latest
-    container_name: nestack-adminer
-    restart: unless-stopped
-    ports:
-      - '8080:8080'
+      - '3000:3000'
     environment:
-      ADMINER_DEFAULT_SERVER: postgres
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: nestack
+      DB_PASSWORD: nestack
+      DB_DATABASE: nestack_db
     depends_on:
-      - postgres
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:
-  redis_data:

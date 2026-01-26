@@ -1,13 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OnEvent } from '@nestjs/event-emitter';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Badge, BadgeStatus } from './entities/badge.entity';
-import { UserBadge } from './entities/user-badge.entity';
-import { Mission } from '../missions/entities/mission.entity';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { BadgeType, BadgeIssueType, MissionStatus } from '../../common/enums';
+import { Badge, UserBadge, User, Mission } from '../../database/entities';
+import {
+  CategoryStatus,
+  BadgeConditionType,
+  BadgeIssueType,
+  MissionStatus,
+} from '../../common/enums';
+import { BadgeNotFoundException } from '../../common/exceptions/business.exception';
+import { BadgeResponseDto, UserBadgeResponseDto } from './dto';
 
 @Injectable()
 export class BadgesService {
@@ -15,130 +17,172 @@ export class BadgesService {
 
   constructor(
     @InjectRepository(Badge)
-    private readonly badgeRepository: Repository<Badge>,
+    private badgeRepository: Repository<Badge>,
     @InjectRepository(UserBadge)
-    private readonly userBadgeRepository: Repository<UserBadge>,
+    private userBadgeRepository: Repository<UserBadge>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @InjectRepository(Mission)
-    private readonly missionRepository: Repository<Mission>,
-    private readonly eventEmitter: EventEmitter2,
+    private missionRepository: Repository<Mission>,
   ) {}
 
-  /**
-   * Get all badges
-   */
-  async getAllBadges(): Promise<Badge[]> {
-    return this.badgeRepository.find({
-      where: { status: BadgeStatus.ACTIVE },
-      order: { badgeType: 'ASC', createdAt: 'ASC' },
+  async getAllBadges(userId: string): Promise<BadgeResponseDto[]> {
+    const badges = await this.badgeRepository.find({
+      where: { status: CategoryStatus.ACTIVE },
+      order: { badgeType: 'ASC', name: 'ASC' },
     });
+
+    const userBadges = await this.userBadgeRepository.find({
+      where: { userId },
+    });
+
+    const userBadgeMap = new Map(userBadges.map((ub) => [ub.badgeId, ub]));
+
+    return badges.map((badge) =>
+      BadgeResponseDto.fromEntity(badge, userBadgeMap.get(badge.id)),
+    );
   }
 
-  /**
-   * Get badge by ID
-   */
-  async getBadgeById(badgeId: string): Promise<Badge> {
+  async getMyBadges(userId: string): Promise<UserBadgeResponseDto[]> {
+    const userBadges = await this.userBadgeRepository.find({
+      where: { userId },
+      relations: ['badge'],
+      order: { issuedAt: 'DESC' },
+    });
+
+    return userBadges.map((ub) => UserBadgeResponseDto.fromEntity(ub));
+  }
+
+  async getBadge(userId: string, badgeId: string): Promise<BadgeResponseDto> {
     const badge = await this.badgeRepository.findOne({
       where: { id: badgeId },
     });
 
     if (!badge) {
-      throw new BusinessException('BADGE_001');
+      throw new BadgeNotFoundException();
     }
 
-    return badge;
-  }
-
-  /**
-   * Get user's badges
-   */
-  async getUserBadges(userId: string): Promise<UserBadge[]> {
-    return this.userBadgeRepository.find({
-      where: { userId },
-      relations: ['badge'],
-      order: { issuedAt: 'DESC' },
-    });
-  }
-
-  /**
-   * Get user's badges with all badges (including unearned)
-   */
-  async getUserBadgesWithStatus(userId: string): Promise<Array<Badge & { earned: boolean; earnedAt?: Date }>> {
-    const allBadges = await this.getAllBadges();
-    const userBadges = await this.getUserBadges(userId);
-
-    const userBadgeMap = new Map(userBadges.map((ub) => [ub.badgeId, ub]));
-
-    return allBadges.map((badge) => {
-      const userBadge = userBadgeMap.get(badge.id);
-      return {
-        ...badge,
-        earned: !!userBadge,
-        earnedAt: userBadge?.issuedAt,
-      };
-    });
-  }
-
-  /**
-   * Award badge to user
-   */
-  async awardBadge(
-    userId: string,
-    badgeId: string,
-    issueType: BadgeIssueType = BadgeIssueType.AUTO,
-    issuedBy?: string,
-  ): Promise<UserBadge> {
-    // Check if badge exists
-    const badge = await this.getBadgeById(badgeId);
-
-    // Check if user already has this badge
-    const existingBadge = await this.userBadgeRepository.findOne({
+    const userBadge = await this.userBadgeRepository.findOne({
       where: { userId, badgeId },
     });
 
-    if (existingBadge) {
-      throw new BusinessException('BADGE_002');
-    }
+    return BadgeResponseDto.fromEntity(badge, userBadge ?? undefined);
+  }
 
-    // Award badge
-    const userBadge = this.userBadgeRepository.create({
-      userId,
-      badgeId,
-      issueType,
-      issuedBy,
+  // Auto-issue badges based on conditions
+  async checkAndIssueBadges(userId: string): Promise<UserBadgeResponseDto[]> {
+    const newBadges: UserBadgeResponseDto[] = [];
+
+    // Get all badges that user doesn't have
+    const allBadges = await this.badgeRepository.find({
+      where: { status: CategoryStatus.ACTIVE },
     });
 
-    await this.userBadgeRepository.save(userBadge);
+    const existingBadges = await this.userBadgeRepository.find({
+      where: { userId },
+      select: ['badgeId'],
+    });
 
-    // Emit event
-    this.eventEmitter.emit('badge.earned', { userId, badge, userBadge });
+    const existingBadgeIds = new Set(existingBadges.map((b) => b.badgeId));
+    const unearned = allBadges.filter((b) => !existingBadgeIds.has(b.id));
 
-    return userBadge;
+    for (const badge of unearned) {
+      const shouldIssue = await this.checkBadgeCondition(userId, badge);
+      if (shouldIssue) {
+        const userBadge = await this.issueBadge(userId, badge.id);
+        newBadges.push(userBadge);
+      }
+    }
+
+    return newBadges;
   }
 
-  /**
-   * Check and award badges based on mission completion
-   */
-  @OnEvent('mission.completed')
-  async handleMissionCompleted(payload: { mission: Mission }): Promise<void> {
-    const { mission } = payload;
+  private async checkBadgeCondition(
+    userId: string,
+    badge: Badge,
+  ): Promise<boolean> {
+    const { conditionType, conditionValue } = badge;
 
-    try {
-      await this.checkLifecycleBadges(mission.userId, mission.categoryId);
-      await this.checkStreakBadges(mission.userId);
-      if (mission.familyGroupId) {
-        await this.checkFamilyBadges(mission.userId, mission.familyGroupId);
-      }
-    } catch (error) {
-      this.logger.error('Error checking badges after mission completion', error);
+    switch (conditionType) {
+      case BadgeConditionType.MISSION_COMPLETE:
+        return this.checkMissionComplete(userId, conditionValue);
+
+      case BadgeConditionType.SAVINGS_AMOUNT:
+        return this.checkSavingsAmount(userId, conditionValue);
+
+      case BadgeConditionType.FIRST_ACTION:
+        return this.checkFirstAction(userId, conditionValue);
+
+      case BadgeConditionType.CATEGORY_COMPLETE:
+        return this.checkCategoryComplete(userId, conditionValue);
+
+      default:
+        return false;
     }
   }
 
-  /**
-   * Check lifecycle badges (based on category completion count)
-   */
-  private async checkLifecycleBadges(userId: string, categoryId: string): Promise<void> {
-    // Get all completed missions in this category
+  private async checkMissionComplete(
+    userId: string,
+    condition: any,
+  ): Promise<boolean> {
+    const requiredCount = condition.count || 1;
+
     const completedCount = await this.missionRepository.count({
+      where: { userId, status: MissionStatus.COMPLETED },
+    });
+
+    return completedCount >= requiredCount;
+  }
+
+  private async checkSavingsAmount(
+    userId: string,
+    condition: any,
+  ): Promise<boolean> {
+    const requiredAmount = condition.amount || 0;
+
+    const missions = await this.missionRepository.find({
+      where: { userId },
+    });
+
+    const totalSaved = missions.reduce(
+      (sum, m) => sum + Number(m.currentAmount),
+      0,
+    );
+
+    return totalSaved >= requiredAmount;
+  }
+
+  private async checkFirstAction(
+    userId: string,
+    condition: any,
+  ): Promise<boolean> {
+    const actionType = condition.actionType;
+
+    switch (actionType) {
+      case 'mission':
+        const missionCount = await this.missionRepository.count({
+          where: { userId },
+        });
+        return missionCount >= 1;
+
+      case 'family':
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        return !!user?.familyGroupId;
+
+      default:
+        return false;
+    }
+  }
+
+  private async checkCategoryComplete(
+    userId: string,
+    condition: any,
+  ): Promise<boolean> {
+    const categoryId = condition.categoryId;
+
+    const completedInCategory = await this.missionRepository.count({
       where: {
         userId,
         categoryId,
@@ -146,117 +190,28 @@ export class BadgesService {
       },
     });
 
-    // Find matching lifecycle badges
-    const lifecycleBadges = await this.badgeRepository.find({
-      where: { badgeType: BadgeType.LIFECYCLE, status: BadgeStatus.ACTIVE },
-    });
-
-    for (const badge of lifecycleBadges) {
-      const condition = badge.conditionValue;
-
-      // Check if this badge is for this category
-      if (condition.categoryId !== categoryId) continue;
-
-      // Check if user meets the completion count
-      if (condition.completedCount && completedCount >= condition.completedCount) {
-        try {
-          await this.awardBadge(userId, badge.id);
-          this.logger.log(`Awarded lifecycle badge ${badge.name} to user ${userId}`);
-        } catch (error) {
-          // Badge already earned, ignore
-        }
-      }
-    }
+    return completedInCategory >= 1;
   }
 
-  /**
-   * Check streak badges (based on consecutive mission completions)
-   */
-  private async checkStreakBadges(userId: string): Promise<void> {
-    // Calculate current streak (simplified - would need more complex logic in production)
-    // For now, we'll count missions completed in consecutive months
-
-    const now = new Date();
-    const missions = await this.missionRepository.find({
-      where: { userId, status: MissionStatus.COMPLETED },
-      order: { completedAt: 'DESC' },
+  private async issueBadge(
+    userId: string,
+    badgeId: string,
+  ): Promise<UserBadgeResponseDto> {
+    const userBadge = this.userBadgeRepository.create({
+      userId,
+      badgeId,
+      issueType: BadgeIssueType.AUTO,
     });
 
-    // Calculate consecutive months
-    let consecutiveMonths = 0;
-    let currentMonth = now.getMonth();
-    let currentYear = now.getFullYear();
+    await this.userBadgeRepository.save(userBadge);
 
-    for (const mission of missions) {
-      if (!mission.completedAt) continue;
-
-      const missionMonth = mission.completedAt.getMonth();
-      const missionYear = mission.completedAt.getFullYear();
-
-      if (missionMonth === currentMonth && missionYear === currentYear) {
-        continue; // Same month, check previous
-      }
-
-      // Check if it's the previous month
-      const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-      const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-      if (missionMonth === prevMonth && missionYear === prevYear) {
-        consecutiveMonths++;
-        currentMonth = prevMonth;
-        currentYear = prevYear;
-      } else {
-        break; // Streak broken
-      }
-    }
-
-    // Check streak badges
-    const streakBadges = await this.badgeRepository.find({
-      where: { badgeType: BadgeType.STREAK, status: BadgeStatus.ACTIVE },
+    const saved = await this.userBadgeRepository.findOne({
+      where: { id: userBadge.id },
+      relations: ['badge'],
     });
 
-    for (const badge of streakBadges) {
-      const condition = badge.conditionValue;
+    this.logger.log(`Badge ${badgeId} issued to user ${userId}`);
 
-      if (condition.consecutiveMonths && consecutiveMonths >= condition.consecutiveMonths) {
-        try {
-          await this.awardBadge(userId, badge.id);
-          this.logger.log(`Awarded streak badge ${badge.name} to user ${userId}`);
-        } catch (error) {
-          // Badge already earned, ignore
-        }
-      }
-    }
-  }
-
-  /**
-   * Check family badges (based on joint family completions)
-   */
-  private async checkFamilyBadges(userId: string, familyGroupId: string): Promise<void> {
-    // Count missions completed by the family group
-    const familyCompletedCount = await this.missionRepository.count({
-      where: {
-        familyGroupId,
-        status: MissionStatus.COMPLETED,
-      },
-    });
-
-    // Check family badges
-    const familyBadges = await this.badgeRepository.find({
-      where: { badgeType: BadgeType.FAMILY, status: BadgeStatus.ACTIVE },
-    });
-
-    for (const badge of familyBadges) {
-      const condition = badge.conditionValue;
-
-      if (condition.familyCompletedCount && familyCompletedCount >= condition.familyCompletedCount) {
-        try {
-          await this.awardBadge(userId, badge.id);
-          this.logger.log(`Awarded family badge ${badge.name} to user ${userId}`);
-        } catch (error) {
-          // Badge already earned, ignore
-        }
-      }
-    }
+    return UserBadgeResponseDto.fromEntity(saved!);
   }
 }

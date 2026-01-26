@@ -1,99 +1,60 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
   IsNotEmpty,
   IsString,
-  IsOptional,
-  IsUUID,
   IsNumber,
-  IsEnum,
+  IsUUID,
+  IsOptional,
   IsDateString,
   MaxLength,
   Min,
+  IsBoolean,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MissionType, MissionLevel } from '../../../common/enums';
 
 export class CreateMissionDto {
-  @ApiPropertyOptional({
-    description: '템플릿 ID (템플릿 기반 미션 생성 시)',
-    example: 'uuid-template-id',
-  })
-  @IsOptional()
-  @IsUUID()
-  templateId?: string;
-
-  @ApiProperty({
-    description: '카테고리 ID',
-    example: 'uuid-category-id',
-  })
-  @IsNotEmpty()
-  @IsUUID()
-  categoryId: string;
-
-  @ApiPropertyOptional({
-    description: '상위 미션 ID (하위 미션 생성 시)',
-    example: 'uuid-parent-mission-id',
-  })
-  @IsOptional()
-  @IsUUID()
-  parentMissionId?: string;
-
-  @ApiProperty({
-    description: '미션 이름',
-    example: '결혼 자금 모으기',
-  })
-  @IsNotEmpty()
+  @ApiProperty({ description: 'Mission name', example: '결혼 자금 모으기' })
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
   name: string;
 
-  @ApiPropertyOptional({
-    description: '미션 설명',
-    example: '결혼식 비용 5천만원 목표',
-  })
+  @ApiProperty({ description: 'Mission description', required: false })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({
-    description: '목표 금액',
-    example: 50000000,
-  })
+  @ApiProperty({ description: 'Category ID' })
+  @IsUUID()
   @IsNotEmpty()
+  categoryId: string;
+
+  @ApiProperty({ description: 'Template ID', required: false })
+  @IsOptional()
+  @IsUUID()
+  templateId?: string;
+
+  @ApiProperty({ description: 'Goal amount', example: 10000000 })
   @IsNumber()
   @Min(0)
   goalAmount: number;
 
-  @ApiPropertyOptional({
-    description: '미션 유형',
-    enum: MissionType,
-    default: MissionType.CUSTOM,
-  })
-  @IsOptional()
-  @IsEnum(MissionType)
-  missionType?: MissionType;
-
-  @ApiPropertyOptional({
-    description: '미션 레벨',
-    enum: MissionLevel,
-    default: MissionLevel.MAIN,
-  })
-  @IsOptional()
-  @IsEnum(MissionLevel)
-  missionLevel?: MissionLevel;
-
-  @ApiPropertyOptional({
-    description: '시작일',
-    example: '2024-01-01',
-  })
+  @ApiProperty({ description: 'Start date', required: false })
   @IsOptional()
   @IsDateString()
   startDate?: string;
 
-  @ApiProperty({
-    description: '목표일',
-    example: '2025-12-31',
-  })
-  @IsNotEmpty()
+  @ApiProperty({ description: 'Due date' })
   @IsDateString()
+  @IsNotEmpty()
   dueDate: string;
+
+  @ApiProperty({ description: 'Share with family', required: false })
+  @IsOptional()
+  @IsBoolean()
+  shareWithFamily?: boolean;
+
+  @ApiProperty({ description: 'Parent mission ID for sub-missions', required: false })
+  @IsOptional()
+  @IsUUID()
+  parentMissionId?: string;
 }

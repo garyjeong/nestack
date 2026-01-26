@@ -1,132 +1,127 @@
 import {
   Controller,
   Post,
-  Get,
   Body,
+  Get,
   Query,
   HttpCode,
   HttpStatus,
-  Headers,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import {
   SignupDto,
   LoginDto,
-  GoogleAuthDto,
   RefreshTokenDto,
+  GoogleLoginDto,
+  VerifyEmailDto,
+  ResendVerificationDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  AuthResponseDto,
+  TokenResponseDto,
 } from './dto';
-import { Public, CurrentUser } from '../../common/decorators';
-import { User } from '../users/entities/user.entity';
+import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../../database/entities';
 
-@ApiTags('auth')
-@Controller({ path: 'auth', version: '1' })
+@ApiTags('Auth')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('signup')
-  @Public()
-  @ApiOperation({ summary: '회원가입' })
-  @ApiResponse({ status: 201, description: '회원가입 성공, 인증 메일 발송' })
-  @ApiResponse({ status: 400, description: '이미 사용 중인 이메일' })
-  async signup(@Body() signupDto: SignupDto) {
-    return this.authService.signup(signupDto);
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User registered successfully' })
+  @ApiResponse({ status: 409, description: 'User already exists' })
+  async signup(@Body() dto: SignupDto): Promise<AuthResponseDto> {
+    return this.authService.signup(dto);
   }
 
-  @Get('verify-email')
   @Public()
-  @ApiOperation({ summary: '이메일 인증 확인' })
-  @ApiResponse({ status: 200, description: '이메일 인증 완료' })
-  @ApiResponse({ status: 400, description: '유효하지 않은 토큰' })
-  async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail(token);
-  }
-
-  @Post('resend-verification')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '이메일 인증 재발송' })
-  @ApiResponse({ status: 200, description: '인증 메일 재발송' })
-  async resendVerification(@Body('email') email: string) {
-    return this.authService.resendVerificationEmail(email);
-  }
-
   @Post('login')
-  @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '로그인' })
-  @ApiResponse({ status: 200, description: '로그인 성공' })
-  @ApiResponse({ status: 401, description: '인증 실패' })
-  async login(
-    @Body() loginDto: LoginDto,
-    @Headers('user-agent') userAgent: string,
-  ) {
-    return this.authService.login(loginDto, userAgent);
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+    return this.authService.login(dto);
   }
 
+  @Public()
   @Post('google')
-  @Public()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Google 로그인' })
-  @ApiResponse({ status: 200, description: 'Google 로그인 성공' })
-  @ApiResponse({ status: 401, description: '유효하지 않은 Google 토큰' })
-  async googleAuth(
-    @Body() googleAuthDto: GoogleAuthDto,
-    @Headers('user-agent') userAgent: string,
-  ) {
-    return this.authService.googleAuth(googleAuthDto, userAgent);
+  @ApiOperation({ summary: 'Login with Google' })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 401, description: 'Invalid Google token' })
+  async googleLogin(@Body() dto: GoogleLoginDto): Promise<AuthResponseDto> {
+    return this.authService.googleLogin(dto);
   }
 
-  @Post('refresh')
   @Public()
+  @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '토큰 갱신' })
-  @ApiResponse({ status: 200, description: '토큰 갱신 성공' })
-  @ApiResponse({ status: 401, description: '유효하지 않은 리프레시 토큰' })
-  async refresh(
-    @Body() refreshTokenDto: RefreshTokenDto,
-    @Headers('user-agent') userAgent: string,
-  ) {
-    return this.authService.refreshTokens(refreshTokenDto.refreshToken, userAgent);
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid refresh token' })
+  async refresh(@Body() dto: RefreshTokenDto): Promise<TokenResponseDto> {
+    return this.authService.refresh(dto.refreshToken);
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: '로그아웃' })
-  @ApiResponse({ status: 200, description: '로그아웃 완료' })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Logout user' })
+  @ApiResponse({ status: 200, description: 'Logout successful' })
   async logout(
     @CurrentUser() user: User,
-    @Body('refreshToken') refreshToken: string,
-    @Body('allDevices') allDevices: boolean = false,
-  ) {
-    await this.authService.logout(user.id, refreshToken, allDevices);
-    return { message: '로그아웃되었습니다.' };
+    @Body() dto?: RefreshTokenDto,
+  ): Promise<{ message: string }> {
+    await this.authService.logout(user.id, dto?.refreshToken);
+    return { message: 'Logout successful' };
   }
 
-  @Post('forgot-password')
   @Public()
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '비밀번호 찾기 (재설정 메일 발송)' })
-  @ApiResponse({ status: 200, description: '비밀번호 재설정 메일 발송' })
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(forgotPasswordDto);
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Verify email address' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired token' })
+  async verifyEmail(@Query() dto: VerifyEmailDto): Promise<{ message: string }> {
+    await this.authService.verifyEmail(dto.token);
+    return { message: 'Email verified successfully' };
   }
 
-  @Post('reset-password')
   @Public()
+  @Post('verify-email/resend')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '비밀번호 재설정' })
-  @ApiResponse({ status: 200, description: '비밀번호 재설정 완료' })
-  @ApiResponse({ status: 400, description: '유효하지 않은 토큰' })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto);
+  @ApiOperation({ summary: 'Resend verification email' })
+  @ApiResponse({ status: 200, description: 'Verification email sent' })
+  async resendVerificationEmail(
+    @Body() dto: ResendVerificationDto,
+  ): Promise<{ message: string }> {
+    await this.authService.resendVerificationEmail(dto.email);
+    return { message: 'Verification email sent if the account exists' };
+  }
+
+  @Public()
+  @Post('password/forgot')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset' })
+  @ApiResponse({ status: 200, description: 'Password reset email sent' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
+    await this.authService.forgotPassword(dto.email);
+    return { message: 'Password reset email sent if the account exists' };
+  }
+
+  @Public()
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired token' })
+  async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
+    return { message: 'Password reset successfully' };
   }
 }

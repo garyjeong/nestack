@@ -1,13 +1,10 @@
-import { IsNotEmpty, IsUUID, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsUUID, ArrayNotEmpty } from 'class-validator';
 
-export class LinkTransactionDto {
-  @ApiProperty({
-    description: '연결할 거래 ID 목록',
-    example: ['uuid-transaction-1', 'uuid-transaction-2'],
-  })
-  @IsNotEmpty()
+export class LinkTransactionsDto {
+  @ApiProperty({ description: 'Transaction IDs to link', type: [String] })
   @IsArray()
+  @ArrayNotEmpty()
   @IsUUID('4', { each: true })
   transactionIds: string[];
 }

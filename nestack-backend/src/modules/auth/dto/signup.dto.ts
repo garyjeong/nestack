@@ -1,29 +1,27 @@
-import { IsEmail, IsString, MinLength, MaxLength, Matches, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PASSWORD_RULES } from '../../../common/constants';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 
 export class SignupDto {
-  @ApiProperty({ example: 'user@example.com' })
-  @IsEmail({}, { message: '올바른 이메일 형식이 아닙니다.' })
+  @ApiProperty({ example: 'user@example.com', description: 'User email' })
+  @IsEmail()
+  @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ example: 'Password123!' })
+  @ApiProperty({ example: 'password123', description: 'User password (min 8 characters)' })
   @IsString()
-  @MinLength(PASSWORD_RULES.MIN_LENGTH, { message: `비밀번호는 ${PASSWORD_RULES.MIN_LENGTH}자 이상이어야 합니다.` })
-  @Matches(PASSWORD_RULES.PATTERN, { message: PASSWORD_RULES.MESSAGE })
+  @MinLength(8)
+  @MaxLength(100)
   password: string;
 
-  @ApiProperty({ example: '홍길동' })
+  @ApiProperty({ example: 'John Doe', description: 'User name' })
   @IsString()
-  @MinLength(1, { message: '이름을 입력해주세요.' })
-  @MaxLength(100, { message: '이름은 100자 이내로 입력해주세요.' })
+  @IsNotEmpty()
+  @MaxLength(100)
   name: string;
-
-  @ApiProperty({ example: true })
-  @IsBoolean()
-  termsAgreed: boolean;
-
-  @ApiProperty({ example: true })
-  @IsBoolean()
-  privacyAgreed: boolean;
 }

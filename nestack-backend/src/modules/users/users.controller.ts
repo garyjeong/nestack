@@ -7,99 +7,54 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { UpdateProfileDto, ChangePasswordDto } from './dto';
-import { CurrentUser } from '../../common/decorators';
-import { User } from './entities/user.entity';
+import { UpdateUserDto, ChangePasswordDto, UserResponseDto } from './dto';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../../database/entities';
 
-@ApiTags('users')
-@ApiBearerAuth('JWT-auth')
-@Controller({ path: 'users', version: '1' })
+@ApiTags('Users')
+@ApiBearerAuth()
+@Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  @ApiOperation({ summary: '내 정보 조회' })
-  @ApiResponse({ status: 200, description: '프로필 정보 반환' })
-  async getMe(@CurrentUser() user: User) {
-    const profile = await this.usersService.getProfile(user.id);
-    return this.formatUserResponse(profile);
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved' })
+  async getMe(@CurrentUser() user: User): Promise<UserResponseDto> {
+    return this.usersService.getMe(user.id);
   }
 
   @Patch('me')
-  @ApiOperation({ summary: '내 정보 수정' })
-  @ApiResponse({ status: 200, description: '수정된 프로필 정보 반환' })
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile updated' })
   async updateMe(
     @CurrentUser() user: User,
-    @Body() updateProfileDto: UpdateProfileDto,
-  ) {
-    const updatedUser = await this.usersService.updateProfile(user.id, updateProfileDto);
-    return this.formatUserResponse(updatedUser);
-  }
-
-  @Patch('me/password')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '비밀번호 변경' })
-  @ApiResponse({ status: 200, description: '비밀번호 변경 완료' })
-  async changePassword(
-    @CurrentUser() user: User,
-    @Body() changePasswordDto: ChangePasswordDto,
-  ) {
-    await this.usersService.changePassword(user.id, changePasswordDto);
-    return { message: '비밀번호가 변경되었습니다.' };
+    @Body() dto: UpdateUserDto,
+  ): Promise<UserResponseDto> {
+    return this.usersService.updateMe(user.id, dto);
   }
 
   @Delete('me')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '회원 탈퇴' })
-  @ApiResponse({ status: 200, description: '회원 탈퇴 완료' })
-  async withdraw(
-    @CurrentUser() user: User,
-    @Body('password') password: string,
-  ) {
-    await this.usersService.withdraw(user.id, password);
-    return { message: '회원 탈퇴가 완료되었습니다.' };
+  @ApiOperation({ summary: 'Delete current user account' })
+  @ApiResponse({ status: 200, description: 'User account deleted' })
+  async deleteMe(@CurrentUser() user: User): Promise<{ message: string }> {
+    await this.usersService.deleteMe(user.id);
+    return { message: 'Account deleted successfully' };
   }
 
-  /**
-   * Format user response (remove sensitive data)
-   */
-  private formatUserResponse(user: User) {
-    const { passwordHash, deletedAt, ...userData } = user;
-
-    // Format family group info
-    let familyGroupInfo = null;
-    if (user.familyGroup) {
-      const partner = user.familyGroup.members?.find((m) => m.id !== user.id);
-      familyGroupInfo = {
-        id: user.familyGroup.id,
-        createdAt: user.familyGroup.createdAt,
-        partner: partner
-          ? {
-              id: partner.id,
-              name: partner.name,
-              profileImageUrl: partner.profileImageUrl,
-            }
-          : null,
-      };
-    }
-
-    return {
-      id: userData.id,
-      email: userData.email,
-      name: userData.name,
-      profileImageUrl: userData.profileImageUrl,
-      provider: userData.provider,
-      emailVerified: userData.emailVerified,
-      status: userData.status,
-      familyGroup: familyGroupInfo,
-      createdAt: userData.createdAt,
-    };
+  @Patch('me/password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change password' })
+  @ApiResponse({ status: 200, description: 'Password changed' })
+  @ApiResponse({ status: 401, description: 'Invalid current password' })
+  async changePassword(
+    @CurrentUser() user: User,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    await this.usersService.changePassword(user.id, dto);
+    return { message: 'Password changed successfully' };
   }
 }

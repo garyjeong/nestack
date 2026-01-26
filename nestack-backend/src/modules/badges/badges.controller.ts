@@ -1,53 +1,38 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { Controller, Get, Param } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BadgesService } from './badges.service';
-import { CurrentUser } from '../../common/decorators';
-import { User } from '../users/entities/user.entity';
+import { BadgeResponseDto, UserBadgeResponseDto } from './dto';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { User } from '../../database/entities';
 
-@ApiTags('badges')
-@ApiBearerAuth('JWT-auth')
-@Controller({ path: 'badges', version: '1' })
+@ApiTags('Badges')
+@ApiBearerAuth()
+@Controller('badges')
 export class BadgesController {
   constructor(private readonly badgesService: BadgesService) {}
 
   @Get()
-  @ApiOperation({ summary: '전체 뱃지 목록 조회' })
-  @ApiResponse({ status: 200, description: '뱃지 목록 반환' })
-  async getAllBadges() {
-    const badges = await this.badgesService.getAllBadges();
-    return { badges };
+  @ApiOperation({ summary: 'Get all badges with user progress' })
+  @ApiResponse({ status: 200, description: 'Badges retrieved' })
+  async getAllBadges(@CurrentUser() user: User): Promise<BadgeResponseDto[]> {
+    return this.badgesService.getAllBadges(user.id);
   }
 
   @Get('me')
-  @ApiOperation({ summary: '내 뱃지 목록 조회 (획득/미획득 포함)' })
-  @ApiResponse({ status: 200, description: '내 뱃지 목록 반환' })
-  async getMyBadges(@CurrentUser() user: User) {
-    const badges = await this.badgesService.getUserBadgesWithStatus(user.id);
-    return {
-      badges,
-      earnedCount: badges.filter((b) => b.earned).length,
-      totalCount: badges.length,
-    };
+  @ApiOperation({ summary: 'Get badges earned by current user' })
+  @ApiResponse({ status: 200, description: 'User badges retrieved' })
+  async getMyBadges(@CurrentUser() user: User): Promise<UserBadgeResponseDto[]> {
+    return this.badgesService.getMyBadges(user.id);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '뱃지 상세 조회' })
-  @ApiParam({ name: 'id', description: '뱃지 ID' })
-  @ApiResponse({ status: 200, description: '뱃지 상세 정보 반환' })
-  @ApiResponse({ status: 404, description: '뱃지를 찾을 수 없음' })
-  async getBadgeById(@Param('id', ParseUUIDPipe) id: string) {
-    const badge = await this.badgesService.getBadgeById(id);
-    return { badge };
+  @ApiOperation({ summary: 'Get badge details' })
+  @ApiResponse({ status: 200, description: 'Badge retrieved' })
+  @ApiResponse({ status: 404, description: 'Badge not found' })
+  async getBadge(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+  ): Promise<BadgeResponseDto> {
+    return this.badgesService.getBadge(user.id, id);
   }
 }

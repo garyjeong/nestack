@@ -1,15 +1,14 @@
-import { IsString, MinLength, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { PASSWORD_RULES } from '../../../common/constants';
+import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class ChangePasswordDto {
-  @ApiProperty({ example: 'CurrentPassword123!' })
+  @ApiProperty({ description: 'Current password' })
   @IsString()
+  @IsNotEmpty()
   currentPassword: string;
 
-  @ApiProperty({ example: 'NewPassword123!' })
+  @ApiProperty({ description: 'New password (min 8 characters)' })
   @IsString()
-  @MinLength(PASSWORD_RULES.MIN_LENGTH, { message: `비밀번호는 ${PASSWORD_RULES.MIN_LENGTH}자 이상이어야 합니다.` })
-  @Matches(PASSWORD_RULES.PATTERN, { message: PASSWORD_RULES.MESSAGE })
+  @MinLength(8)
   newPassword: string;
 }

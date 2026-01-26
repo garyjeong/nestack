@@ -1,415 +1,286 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BankAccount } from './entities/bank-account.entity';
-import { Transaction } from './entities/transaction.entity';
-import { OpenBankingToken } from './entities/openbanking-token.entity';
-import { UpdateAccountDto, TransactionQueryDto } from './dto';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { CryptoUtil } from '../../common/utils';
-import { TransactionType } from '../../common/enums';
-
-interface OpenBankingConfig {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
-  apiBaseUrl: string;
-  encryptionKey: string;
-}
+import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import {
+  BankAccount,
+  Transaction,
+  OpenBankingToken,
+  User,
+} from '../../database/entities';
+import { TransactionType, ShareStatus } from '../../common/enums';
+import {
+  BankAccountNotFoundException,
+  OpenBankingTokenNotFoundException,
+  UnauthorizedAccessException,
+} from '../../common/exceptions/business.exception';
+import {
+  AccountResponseDto,
+  UpdateAccountDto,
+  TransactionResponseDto,
+  TransactionFilterDto,
+  OpenBankingStatusDto,
+} from './dto';
+import { PaginatedResponse, PaginationMeta } from '../../common/dto/api-response.dto';
 
 @Injectable()
 export class FinanceService {
   private readonly logger = new Logger(FinanceService.name);
-  private readonly openBankingConfig: OpenBankingConfig;
 
   constructor(
     @InjectRepository(BankAccount)
-    private readonly bankAccountRepository: Repository<BankAccount>,
+    private bankAccountRepository: Repository<BankAccount>,
     @InjectRepository(Transaction)
-    private readonly transactionRepository: Repository<Transaction>,
+    private transactionRepository: Repository<Transaction>,
     @InjectRepository(OpenBankingToken)
-    private readonly tokenRepository: Repository<OpenBankingToken>,
-    private readonly configService: ConfigService,
-    private readonly eventEmitter: EventEmitter2,
-  ) {
-    this.openBankingConfig = {
-      clientId: this.configService.get<string>('openbanking.clientId') || '',
-      clientSecret: this.configService.get<string>('openbanking.clientSecret') || '',
-      redirectUri: this.configService.get<string>('openbanking.redirectUri') || '',
-      apiBaseUrl: this.configService.get<string>('openbanking.apiBaseUrl') || 'https://testapi.openbanking.or.kr',
-      encryptionKey: this.configService.get<string>('encryption.key') || '',
-    };
+    private openBankingTokenRepository: Repository<OpenBankingToken>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private httpService: HttpService,
+    private configService: ConfigService,
+  ) {}
+
+  // Open Banking
+  getAuthorizeUrl(userId: string): string {
+    const baseUrl = this.configService.get('openbanking.baseUrl');
+    const clientId = this.configService.get('openbanking.clientId');
+    const redirectUri = this.configService.get('openbanking.redirectUri');
+
+    const state = Buffer.from(JSON.stringify({ userId })).toString('base64');
+
+    return `${baseUrl}/oauth/2.0/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=login inquiry transfer&state=${state}&auth_type=0`;
   }
 
-  /**
-   * Generate OpenBanking authorization URL
-   */
-  getAuthorizationUrl(state: string): string {
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: this.openBankingConfig.clientId,
-      redirect_uri: this.openBankingConfig.redirectUri,
-      scope: 'login inquiry transfer',
-      state,
-      auth_type: '0', // Simple auth
-    });
+  async handleCallback(code: string, state: string): Promise<void> {
+    const { userId } = JSON.parse(Buffer.from(state, 'base64').toString());
 
-    return `${this.openBankingConfig.apiBaseUrl}/oauth/2.0/authorize?${params.toString()}`;
-  }
+    const baseUrl = this.configService.get('openbanking.baseUrl');
+    const clientId = this.configService.get('openbanking.clientId');
+    const clientSecret = this.configService.get('openbanking.clientSecret');
+    const redirectUri = this.configService.get('openbanking.redirectUri');
 
-  /**
-   * Handle OpenBanking OAuth callback
-   */
-  async handleCallback(userId: string, code: string): Promise<void> {
     try {
-      // Exchange authorization code for tokens
-      const tokenResponse = await this.exchangeCodeForTokens(code);
+      // Exchange code for token
+      const tokenResponse = await firstValueFrom(
+        this.httpService.post(`${baseUrl}/oauth/2.0/token`, null, {
+          params: {
+            code,
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          },
+        }),
+      );
 
-      // Encrypt tokens before storing
-      const encryptedAccessToken = CryptoUtil.encrypt(tokenResponse.access_token, this.openBankingConfig.encryptionKey);
-      const encryptedRefreshToken = CryptoUtil.encrypt(tokenResponse.refresh_token, this.openBankingConfig.encryptionKey);
+      const tokenData = tokenResponse.data;
 
-      // Store or update tokens
-      let existingToken = await this.tokenRepository.findOne({ where: { userId } });
+      // Save or update token
+      let token = await this.openBankingTokenRepository.findOne({
+        where: { userId },
+      });
 
-      if (existingToken) {
-        existingToken.accessToken = encryptedAccessToken;
-        existingToken.refreshToken = encryptedRefreshToken;
-        existingToken.tokenType = tokenResponse.token_type;
-        existingToken.scope = tokenResponse.scope;
-        existingToken.userSeqNo = tokenResponse.user_seq_no;
-        existingToken.expiresAt = new Date(Date.now() + tokenResponse.expires_in * 1000);
-        await this.tokenRepository.save(existingToken);
+      if (token) {
+        token.accessToken = tokenData.access_token;
+        token.refreshToken = tokenData.refresh_token;
+        token.tokenType = tokenData.token_type;
+        token.scope = tokenData.scope;
+        token.userSeqNo = tokenData.user_seq_no;
+        token.expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
       } else {
-        const newToken = this.tokenRepository.create({
+        token = this.openBankingTokenRepository.create({
           userId,
-          accessToken: encryptedAccessToken,
-          refreshToken: encryptedRefreshToken,
-          tokenType: tokenResponse.token_type,
-          scope: tokenResponse.scope,
-          userSeqNo: tokenResponse.user_seq_no,
-          expiresAt: new Date(Date.now() + tokenResponse.expires_in * 1000),
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token,
+          tokenType: tokenData.token_type,
+          scope: tokenData.scope,
+          userSeqNo: tokenData.user_seq_no,
+          expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
         });
-        await this.tokenRepository.save(newToken);
       }
 
-      // Fetch and sync accounts
+      await this.openBankingTokenRepository.save(token);
+
+      // Sync accounts
       await this.syncAccounts(userId);
     } catch (error) {
-      this.logger.error('OpenBanking callback error', error);
-      throw new BusinessException('FINANCE_001');
+      this.logger.error('Open Banking callback failed', error);
+      throw error;
     }
   }
 
-  /**
-   * Exchange authorization code for tokens (simulated)
-   */
-  private async exchangeCodeForTokens(code: string): Promise<{
-    access_token: string;
-    refresh_token: string;
-    token_type: string;
-    expires_in: number;
-    scope: string;
-    user_seq_no: string;
-  }> {
-    // In production, make actual HTTP call to OpenBanking API
-    // For development, return simulated response
-    this.logger.log(`Exchanging code for tokens: ${code}`);
+  async getOpenBankingStatus(userId: string): Promise<OpenBankingStatusDto> {
+    const token = await this.openBankingTokenRepository.findOne({
+      where: { userId },
+    });
 
-    // Simulated response
+    if (!token) {
+      return { isConnected: false };
+    }
+
     return {
-      access_token: `access_${Date.now()}`,
-      refresh_token: `refresh_${Date.now()}`,
-      token_type: 'Bearer',
-      expires_in: 7776000, // 90 days
-      scope: 'login inquiry transfer',
-      user_seq_no: `U${Date.now()}`,
+      isConnected: true,
+      connectedAt: token.createdAt,
+      expiresAt: token.expiresAt,
     };
   }
 
-  /**
-   * Sync accounts from OpenBanking
-   */
-  async syncAccounts(userId: string): Promise<BankAccount[]> {
-    const token = await this.getValidToken(userId);
-    if (!token) {
-      throw new BusinessException('FINANCE_002');
-    }
-
-    try {
-      // Fetch accounts from OpenBanking API (simulated)
-      const accountsData = await this.fetchAccountsFromOpenBanking(token);
-
-      // Sync accounts to database
-      const accounts: BankAccount[] = [];
-
-      for (const accountData of accountsData) {
-        let account = await this.bankAccountRepository.findOne({
-          where: { userId, fintechUseNum: accountData.fintech_use_num },
-        });
-
-        const encryptedAccountNumber = CryptoUtil.encrypt(accountData.account_num, this.openBankingConfig.encryptionKey);
-
-        if (account) {
-          account.balance = accountData.balance_amt;
-          account.lastSyncedAt = new Date();
-          await this.bankAccountRepository.save(account);
-        } else {
-          account = this.bankAccountRepository.create({
-            userId,
-            bankCode: accountData.bank_code_std,
-            bankName: accountData.bank_name,
-            accountNumber: encryptedAccountNumber,
-            accountNumberMasked: accountData.account_num_masked,
-            accountType: accountData.account_type,
-            balance: accountData.balance_amt,
-            fintechUseNum: accountData.fintech_use_num,
-            lastSyncedAt: new Date(),
-          });
-          await this.bankAccountRepository.save(account);
-        }
-
-        accounts.push(account);
-      }
-
-      // Emit event
-      this.eventEmitter.emit('accounts.synced', { userId, accounts });
-
-      return accounts;
-    } catch (error) {
-      this.logger.error('Account sync error', error);
-      throw new BusinessException('FINANCE_005');
-    }
+  async disconnectOpenBanking(userId: string): Promise<void> {
+    await this.openBankingTokenRepository.delete({ userId });
+    // Optionally delete accounts and transactions
+    // await this.bankAccountRepository.delete({ userId });
   }
 
-  /**
-   * Fetch accounts from OpenBanking API (simulated)
-   */
-  private async fetchAccountsFromOpenBanking(token: OpenBankingToken): Promise<Array<{
-    fintech_use_num: string;
-    account_num: string;
-    account_num_masked: string;
-    bank_code_std: string;
-    bank_name: string;
-    account_type: string;
-    balance_amt: number;
-  }>> {
-    // Simulated response for development
-    return [
-      {
-        fintech_use_num: `F${Date.now()}_1`,
-        account_num: '1234567890123456',
-        account_num_masked: '1234-****-****-3456',
-        bank_code_std: '004',
-        bank_name: 'KB국민은행',
-        account_type: '입출금',
-        balance_amt: 1500000,
-      },
-    ];
-  }
-
-  /**
-   * Get user's bank accounts
-   */
-  async getAccounts(userId: string): Promise<BankAccount[]> {
-    return this.bankAccountRepository.find({
+  // Accounts
+  async getAccounts(userId: string): Promise<AccountResponseDto[]> {
+    const accounts = await this.bankAccountRepository.find({
       where: { userId, isHidden: false },
       order: { createdAt: 'DESC' },
     });
+
+    return accounts.map((a) => AccountResponseDto.fromEntity(a));
   }
 
-  /**
-   * Get account by ID
-   */
-  async getAccountById(userId: string, accountId: string): Promise<BankAccount> {
+  async syncAccounts(userId: string): Promise<AccountResponseDto[]> {
+    const token = await this.openBankingTokenRepository.findOne({
+      where: { userId },
+    });
+
+    if (!token) {
+      throw new OpenBankingTokenNotFoundException();
+    }
+
+    // In production, call Open Banking API to get accounts
+    // For now, return existing accounts
+    this.logger.log(`Syncing accounts for user ${userId}`);
+
+    const accounts = await this.bankAccountRepository.find({
+      where: { userId },
+    });
+
+    // Update last synced time
+    await this.bankAccountRepository.update(
+      { userId },
+      { lastSyncedAt: new Date() },
+    );
+
+    return accounts.map((a) => AccountResponseDto.fromEntity(a));
+  }
+
+  async updateAccount(
+    userId: string,
+    accountId: string,
+    dto: UpdateAccountDto,
+  ): Promise<AccountResponseDto> {
     const account = await this.bankAccountRepository.findOne({
       where: { id: accountId, userId },
     });
 
     if (!account) {
-      throw new BusinessException('FINANCE_003');
+      throw new BankAccountNotFoundException();
     }
 
-    return account;
-  }
-
-  /**
-   * Update account settings
-   */
-  async updateAccount(userId: string, accountId: string, updateDto: UpdateAccountDto): Promise<BankAccount> {
-    const account = await this.getAccountById(userId, accountId);
-
-    if (updateDto.accountAlias !== undefined) account.accountAlias = updateDto.accountAlias;
-    if (updateDto.shareStatus !== undefined) account.shareStatus = updateDto.shareStatus;
-    if (updateDto.isHidden !== undefined) account.isHidden = updateDto.isHidden;
+    if (dto.accountAlias !== undefined) account.accountAlias = dto.accountAlias;
+    if (dto.shareStatus !== undefined) account.shareStatus = dto.shareStatus;
+    if (dto.isHidden !== undefined) account.isHidden = dto.isHidden;
 
     await this.bankAccountRepository.save(account);
-    return account;
+
+    return AccountResponseDto.fromEntity(account);
   }
 
-  /**
-   * Sync single account transactions
-   */
-  async syncAccountTransactions(userId: string, accountId: string): Promise<Transaction[]> {
-    const account = await this.getAccountById(userId, accountId);
-    const token = await this.getValidToken(userId);
+  // Transactions
+  async getTransactions(
+    userId: string,
+    filters: TransactionFilterDto,
+  ): Promise<PaginatedResponse<TransactionResponseDto>> {
+    const page = filters.page || 1;
+    const limit = filters.limit || 20;
+    const skip = (page - 1) * limit;
 
-    if (!token) {
-      throw new BusinessException('FINANCE_002');
-    }
-
-    try {
-      // Fetch transactions from OpenBanking API (simulated)
-      const transactionsData = await this.fetchTransactionsFromOpenBanking(token, account.fintechUseNum);
-
-      const transactions: Transaction[] = [];
-
-      for (const txData of transactionsData) {
-        // Check if transaction already exists
-        let tx = await this.transactionRepository.findOne({
-          where: { bankAccountId: account.id, transactionId: txData.tran_num },
-        });
-
-        if (!tx) {
-          tx = this.transactionRepository.create({
-            bankAccountId: account.id,
-            transactionId: txData.tran_num,
-            type: txData.inout_type === 'I' ? TransactionType.DEPOSIT : TransactionType.WITHDRAWAL,
-            amount: txData.tran_amt,
-            balanceAfter: txData.after_balance_amt,
-            description: txData.print_content,
-            counterparty: txData.branch_name,
-            transactionDate: new Date(txData.tran_date),
-            transactionTime: txData.tran_time,
-          });
-          await this.transactionRepository.save(tx);
-          transactions.push(tx);
-        }
-      }
-
-      // Update account balance and sync time
-      if (transactionsData.length > 0) {
-        account.balance = transactionsData[0].after_balance_amt;
-        account.lastSyncedAt = new Date();
-        await this.bankAccountRepository.save(account);
-      }
-
-      // Emit event
-      this.eventEmitter.emit('transactions.synced', { userId, accountId, transactions });
-
-      return transactions;
-    } catch (error) {
-      this.logger.error('Transaction sync error', error);
-      throw new BusinessException('FINANCE_005');
-    }
-  }
-
-  /**
-   * Fetch transactions from OpenBanking API (simulated)
-   */
-  private async fetchTransactionsFromOpenBanking(token: OpenBankingToken, fintechUseNum: string): Promise<Array<{
-    tran_num: string;
-    inout_type: 'I' | 'O';
-    tran_amt: number;
-    after_balance_amt: number;
-    print_content: string;
-    branch_name: string;
-    tran_date: string;
-    tran_time: string;
-  }>> {
-    // Simulated response for development
-    return [
-      {
-        tran_num: `TX${Date.now()}`,
-        inout_type: 'I',
-        tran_amt: 100000,
-        after_balance_amt: 1600000,
-        print_content: '급여',
-        branch_name: '회사',
-        tran_date: new Date().toISOString().split('T')[0].replace(/-/g, ''),
-        tran_time: '120000',
-      },
-    ];
-  }
-
-  /**
-   * Get transactions for an account
-   */
-  async getTransactions(userId: string, accountId: string, query: TransactionQueryDto): Promise<Transaction[]> {
-    const account = await this.getAccountById(userId, accountId);
-
-    const where: any = { bankAccountId: account.id };
-
-    if (query.startDate && query.endDate) {
-      where.transactionDate = Between(new Date(query.startDate), new Date(query.endDate));
-    } else if (query.startDate) {
-      where.transactionDate = MoreThanOrEqual(new Date(query.startDate));
-    } else if (query.endDate) {
-      where.transactionDate = LessThanOrEqual(new Date(query.endDate));
-    }
-
-    if (query.type) {
-      where.type = query.type;
-    }
-
-    return this.transactionRepository.find({
-      where,
-      order: { transactionDate: 'DESC', createdAt: 'DESC' },
+    // Get user's account IDs
+    const accounts = await this.bankAccountRepository.find({
+      where: { userId },
+      select: ['id'],
     });
+
+    const accountIds = accounts.map((a) => a.id);
+
+    if (accountIds.length === 0) {
+      return new PaginatedResponse([], new PaginationMeta(page, limit, 0));
+    }
+
+    const queryBuilder = this.transactionRepository
+      .createQueryBuilder('transaction')
+      .where('transaction.bank_account_id IN (:...accountIds)', { accountIds });
+
+    if (filters.accountId) {
+      queryBuilder.andWhere('transaction.bank_account_id = :accountId', {
+        accountId: filters.accountId,
+      });
+    }
+
+    if (filters.type) {
+      queryBuilder.andWhere('transaction.type = :type', { type: filters.type });
+    }
+
+    if (filters.startDate && filters.endDate) {
+      queryBuilder.andWhere(
+        'transaction.transaction_date BETWEEN :startDate AND :endDate',
+        { startDate: filters.startDate, endDate: filters.endDate },
+      );
+    } else if (filters.startDate) {
+      queryBuilder.andWhere('transaction.transaction_date >= :startDate', {
+        startDate: filters.startDate,
+      });
+    } else if (filters.endDate) {
+      queryBuilder.andWhere('transaction.transaction_date <= :endDate', {
+        endDate: filters.endDate,
+      });
+    }
+
+    if (filters.missionId) {
+      queryBuilder.andWhere('transaction.mission_id = :missionId', {
+        missionId: filters.missionId,
+      });
+    }
+
+    queryBuilder.orderBy('transaction.transaction_date', 'DESC');
+    queryBuilder.addOrderBy('transaction.transaction_time', 'DESC');
+    queryBuilder.skip(skip).take(limit);
+
+    const [transactions, totalItems] = await queryBuilder.getManyAndCount();
+
+    const data = transactions.map((t) => TransactionResponseDto.fromEntity(t));
+    const meta = new PaginationMeta(page, limit, totalItems);
+
+    return new PaginatedResponse(data, meta);
   }
 
-  /**
-   * Disconnect OpenBanking
-   */
-  async disconnect(userId: string): Promise<void> {
-    // Delete token
-    await this.tokenRepository.delete({ userId });
+  async syncTransactions(userId: string, accountId: string): Promise<void> {
+    const account = await this.bankAccountRepository.findOne({
+      where: { id: accountId, userId },
+    });
 
-    // Delete all accounts and transactions (cascade)
-    await this.bankAccountRepository.delete({ userId });
-  }
+    if (!account) {
+      throw new BankAccountNotFoundException();
+    }
 
-  /**
-   * Check if user has OpenBanking connected
-   */
-  async isConnected(userId: string): Promise<boolean> {
-    const token = await this.tokenRepository.findOne({ where: { userId } });
-    return !!token && token.expiresAt > new Date();
-  }
-
-  /**
-   * Get valid token (refresh if needed)
-   */
-  private async getValidToken(userId: string): Promise<OpenBankingToken | null> {
-    const token = await this.tokenRepository.findOne({ where: { userId } });
+    const token = await this.openBankingTokenRepository.findOne({
+      where: { userId },
+    });
 
     if (!token) {
-      return null;
+      throw new OpenBankingTokenNotFoundException();
     }
 
-    // Check if token is expired
-    if (token.expiresAt <= new Date()) {
-      // Try to refresh token
-      try {
-        await this.refreshToken(token);
-        return this.tokenRepository.findOne({ where: { userId } });
-      } catch {
-        return null;
-      }
-    }
+    // In production, call Open Banking API to get transactions
+    this.logger.log(`Syncing transactions for account ${accountId}`);
 
-    return token;
-  }
-
-  /**
-   * Refresh OpenBanking token (simulated)
-   */
-  private async refreshToken(token: OpenBankingToken): Promise<void> {
-    // In production, make actual HTTP call to OpenBanking API
-    // For development, just extend the expiration
-    token.expiresAt = new Date(Date.now() + 7776000 * 1000);
-    await this.tokenRepository.save(token);
+    // Update last synced time
+    account.lastSyncedAt = new Date();
+    await this.bankAccountRepository.save(account);
   }
 }
