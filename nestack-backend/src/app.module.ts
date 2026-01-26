@@ -27,6 +27,7 @@ import { MissionsModule } from './modules/missions/missions.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { AdminModule } from './modules/admin/admin.module';
     }),
 
     // Feature Modules
+    MailModule,
     AuthModule,
     UsersModule,
     FamilyModule,

@@ -28,6 +28,7 @@ import {
   AuthResponseDto,
   GoogleLoginDto,
 } from './dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -42,6 +43,7 @@ export class AuthService {
     private emailTokenRepository: Repository<EmailVerificationToken>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async signup(dto: SignupDto): Promise<AuthResponseDto> {
@@ -265,10 +267,8 @@ export class AuthService {
       type: TokenType.EMAIL_VERIFY,
     });
 
-    // Create new token
+    // Create new token and send email
     await this.createEmailVerificationToken(user.id);
-
-    // TODO: Send email
   }
 
   async forgotPassword(email: string): Promise<void> {
@@ -301,8 +301,9 @@ export class AuthService {
 
     await this.emailTokenRepository.save(resetToken);
 
-    // TODO: Send email
-    this.logger.log(`Password reset token created for user ${user.id}: ${token}`);
+    // Send password reset email
+    await this.mailService.sendPasswordResetEmail(user.email, user.name, token);
+    this.logger.log(`Password reset token created for user ${user.id}`);
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -387,7 +388,11 @@ export class AuthService {
 
     await this.emailTokenRepository.save(emailToken);
 
-    // TODO: Send verification email
-    this.logger.log(`Email verification token created for user ${userId}: ${token}`);
+    // Send verification email
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user) {
+      await this.mailService.sendVerificationEmail(user.email, user.name, token);
+    }
+    this.logger.log(`Email verification token created for user ${userId}`);
   }
 }

@@ -94,3 +94,21 @@ export class OpenBankingTokenNotFoundException extends BusinessException {
     super('Open Banking not connected', HttpStatus.NOT_FOUND);
   }
 }
+
+export class CategoryNotFoundException extends BusinessException {
+  constructor() {
+    super('Category not found', HttpStatus.NOT_FOUND);
+  }
+}
+
+export class TemplateNotFoundException extends BusinessException {
+  constructor() {
+    super('Template not found', HttpStatus.NOT_FOUND);
+  }
+}
+
+export class AnnouncementNotFoundException extends BusinessException {
+  constructor() {
+    super('Announcement not found', HttpStatus.NOT_FOUND);
+  }
+}

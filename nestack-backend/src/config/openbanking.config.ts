@@ -8,4 +8,5 @@ export default registerAs('openbanking', () => ({
     process.env.OPENBANKING_REDIRECT_URI ||
     'http://localhost:3000/api/v1/finance/openbanking/callback',
   useCode: process.env.OPENBANKING_USE_CODE || '',
+  useMock: process.env.OPENBANKING_USE_MOCK === 'true' || process.env.NODE_ENV === 'development',
 }));

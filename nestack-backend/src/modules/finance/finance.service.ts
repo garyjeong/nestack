@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +24,8 @@ import {
   OpenBankingStatusDto,
 } from './dto';
 import { PaginatedResponse, PaginationMeta } from '../../common/dto/api-response.dto';
+import type { IOpenBankingService } from './openbanking/openbanking.interface';
+import { OPENBANKING_SERVICE } from './openbanking/openbanking.interface';
 
 @Injectable()
 export class FinanceService {
@@ -40,6 +42,8 @@ export class FinanceService {
     private userRepository: Repository<User>,
     private httpService: HttpService,
     private configService: ConfigService,
+    @Inject(OPENBANKING_SERVICE)
+    private openBankingService: IOpenBankingService,
   ) {}
 
   // Open Banking
@@ -152,21 +156,56 @@ export class FinanceService {
       throw new OpenBankingTokenNotFoundException();
     }
 
-    // In production, call Open Banking API to get accounts
-    // For now, return existing accounts
     this.logger.log(`Syncing accounts for user ${userId}`);
 
-    const accounts = await this.bankAccountRepository.find({
-      where: { userId },
-    });
+    try {
+      // Call Open Banking API (or mock service)
+      const openBankingAccounts = await this.openBankingService.getAccounts(
+        token.accessToken,
+        token.userSeqNo,
+      );
 
-    // Update last synced time
-    await this.bankAccountRepository.update(
-      { userId },
-      { lastSyncedAt: new Date() },
-    );
+      // Sync accounts to database
+      for (const obAccount of openBankingAccounts) {
+        let account = await this.bankAccountRepository.findOne({
+          where: { fintechUseNum: obAccount.fintechUseNum },
+        });
 
-    return accounts.map((a) => AccountResponseDto.fromEntity(a));
+        if (account) {
+          // Update existing account
+          account.balance = obAccount.balanceAmt;
+          account.lastSyncedAt = new Date();
+        } else {
+          // Create new account
+          account = this.bankAccountRepository.create({
+            userId,
+            fintechUseNum: obAccount.fintechUseNum,
+            bankCode: obAccount.bankCodeStd,
+            bankName: obAccount.bankName,
+            accountNumber: obAccount.accountNum,
+            accountNumberMasked: obAccount.accountNumMasked,
+            accountType: obAccount.accountType,
+            accountAlias: obAccount.accountAlias || `${obAccount.bankName} 계좌`,
+            balance: obAccount.balanceAmt,
+            shareStatus: ShareStatus.PRIVATE,
+            isHidden: false,
+            lastSyncedAt: new Date(),
+          });
+        }
+
+        await this.bankAccountRepository.save(account);
+      }
+
+      // Return updated accounts
+      const accounts = await this.bankAccountRepository.find({
+        where: { userId },
+      });
+
+      return accounts.map((a) => AccountResponseDto.fromEntity(a));
+    } catch (error) {
+      this.logger.error(`Failed to sync accounts for user ${userId}`, error);
+      throw error;
+    }
   }
 
   async updateAccount(
@@ -276,11 +315,80 @@ export class FinanceService {
       throw new OpenBankingTokenNotFoundException();
     }
 
-    // In production, call Open Banking API to get transactions
     this.logger.log(`Syncing transactions for account ${accountId}`);
 
-    // Update last synced time
-    account.lastSyncedAt = new Date();
-    await this.bankAccountRepository.save(account);
+    try {
+      // Calculate date range (last 30 days)
+      const toDate = new Date();
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 30);
+
+      const fromDateStr = this.formatDateForApi(fromDate);
+      const toDateStr = this.formatDateForApi(toDate);
+
+      // Call Open Banking API (or mock service)
+      const openBankingTransactions = await this.openBankingService.getTransactions(
+        token.accessToken,
+        account.fintechUseNum,
+        fromDateStr,
+        toDateStr,
+      );
+
+      // Sync transactions to database
+      for (const obTran of openBankingTransactions) {
+        // Parse transaction date (format: YYYYMMDD)
+        const tranDate = this.parseTransactionDate(obTran.tranDate);
+
+        // Generate unique transaction ID
+        const transactionId = `${account.fintechUseNum}_${obTran.tranDate}_${obTran.tranTime}_${obTran.tranAmt}`;
+
+        // Check if transaction already exists
+        const existingTran = await this.transactionRepository.findOne({
+          where: { transactionId },
+        });
+
+        if (!existingTran) {
+          const transaction = this.transactionRepository.create({
+            bankAccountId: account.id,
+            transactionId,
+            transactionDate: tranDate,
+            transactionTime: obTran.tranTime,
+            type: obTran.inoutType === 'IN' ? TransactionType.DEPOSIT : TransactionType.WITHDRAWAL,
+            amount: obTran.tranAmt,
+            balanceAfter: obTran.afterBalanceAmt,
+            description: obTran.printContent,
+          });
+
+          await this.transactionRepository.save(transaction);
+        }
+      }
+
+      // Update account balance and sync time
+      if (openBankingTransactions.length > 0) {
+        account.balance = openBankingTransactions[0].afterBalanceAmt;
+      }
+      account.lastSyncedAt = new Date();
+      await this.bankAccountRepository.save(account);
+
+      this.logger.log(`Synced ${openBankingTransactions.length} transactions for account ${accountId}`);
+    } catch (error) {
+      this.logger.error(`Failed to sync transactions for account ${accountId}`, error);
+      throw error;
+    }
+  }
+
+  private formatDateForApi(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}${month}${day}`;
+  }
+
+  private parseTransactionDate(dateStr: string): Date {
+    // Format: YYYYMMDD
+    const year = parseInt(dateStr.substring(0, 4));
+    const month = parseInt(dateStr.substring(4, 6)) - 1;
+    const day = parseInt(dateStr.substring(6, 8));
+    return new Date(year, month, day);
   }
 }

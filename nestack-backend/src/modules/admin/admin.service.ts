@@ -25,6 +25,9 @@ import {
   InvalidCredentialsException,
   UserNotFoundException,
   BadgeNotFoundException,
+  CategoryNotFoundException,
+  TemplateNotFoundException,
+  AnnouncementNotFoundException,
 } from '../../common/exceptions/business.exception';
 import { comparePassword, hashPassword } from '../../common/utils/crypto.util';
 import {
@@ -196,7 +199,7 @@ export class AdminService {
   ): Promise<LifeCycleCategory> {
     const category = await this.categoryRepository.findOne({ where: { id } });
     if (!category) {
-      throw new Error('Category not found');
+      throw new CategoryNotFoundException();
     }
 
     if (dto.name !== undefined) category.name = dto.name;
@@ -236,7 +239,7 @@ export class AdminService {
   ): Promise<MissionTemplate> {
     const template = await this.templateRepository.findOne({ where: { id } });
     if (!template) {
-      throw new Error('Template not found');
+      throw new TemplateNotFoundException();
     }
 
     if (dto.name !== undefined) template.name = dto.name;
@@ -363,7 +366,7 @@ export class AdminService {
       where: { id },
     });
     if (!announcement) {
-      throw new Error('Announcement not found');
+      throw new AnnouncementNotFoundException();
     }
 
     if (dto.title !== undefined) announcement.title = dto.title;
