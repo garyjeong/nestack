@@ -49,7 +49,7 @@ export default function AccountDetailPage() {
             <Skeleton className="h-6 w-32" />
           </div>
         </header>
-        <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
+        <main className="mx-auto px-4 py-6 space-y-6">
           <Skeleton className="h-40 w-full rounded-xl" />
           <Skeleton className="h-60 w-full rounded-xl" />
         </main>
@@ -104,7 +104,7 @@ export default function AccountDetailPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
+      <main className="mx-auto px-4 py-6 space-y-6">
         {/* Account Info Card */}
         <Card className="p-6">
           <div className="flex items-start gap-4 mb-6">

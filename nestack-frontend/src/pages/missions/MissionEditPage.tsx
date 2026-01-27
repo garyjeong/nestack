@@ -64,7 +64,7 @@ export default function MissionEditPage() {
             <Skeleton className="h-6 w-32" />
           </div>
         </header>
-        <main className="mx-auto max-w-lg px-4 py-6 space-y-6">
+        <main className="mx-auto px-4 py-6 space-y-6">
           <Skeleton className="h-48 w-full rounded-xl" />
           <Skeleton className="h-32 w-full rounded-xl" />
           <Skeleton className="h-24 w-full rounded-xl" />
@@ -95,7 +95,7 @@ export default function MissionEditPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-6">
+      <main className="mx-auto px-4 py-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic Info */}
           <Card className="p-6">
@@ -190,8 +190,11 @@ export default function MissionEditPage() {
           </Card>
 
           {/* Submit Button */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-4">
-            <div className="mx-auto max-w-lg flex gap-3">
+          <div
+              className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 bg-white border-t border-stone-200 px-4"
+              style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))', paddingTop: '1rem' }}
+            >
+            <div className="flex gap-3">
               <Button
                 type="button"
                 variant="outline"

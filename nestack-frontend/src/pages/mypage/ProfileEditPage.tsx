@@ -62,7 +62,7 @@ export default function ProfileEditPage() {
     <AppShell showBottomNav={false}>
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm">
-        <div className="mx-auto flex max-w-full items-center gap-4 sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
             className="rounded-lg p-1 text-stone-600 transition-colors hover:bg-stone-100"
@@ -73,7 +73,7 @@ export default function ProfileEditPage() {
         </div>
       </header>
 
-      <Page narrow>
+      <Page>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Profile Image */}
           <div className="flex justify-center">

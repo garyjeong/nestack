@@ -26,9 +26,12 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-40 lg:hidden">
+    <nav
+      className="fixed bottom-0 left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4"
+      style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       {/* 플로팅 네비게이션 바 */}
-      <div className="mx-auto max-w-md rounded-2xl bg-white/95 backdrop-blur-md shadow-lg border border-stone-100">
+      <div className="rounded-2xl bg-white/95 backdrop-blur-md shadow-lg border border-stone-100">
         <div className="flex">
           {navItems.map((item) => {
             const active = isActive(item.path)
@@ -39,7 +42,7 @@ export function BottomNav() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex flex-1 flex-col items-center py-3 transition-all duration-200',
+                  'flex flex-1 flex-col items-center justify-center min-h-[56px] py-2 transition-all duration-200',
                   'active:scale-95',
                   active
                     ? 'text-primary-600'

@@ -33,8 +33,8 @@ export default function HomePage() {
   return (
     <AppShell>
       {/* 모바일 헤더 - 간소화 */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3 lg:hidden">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3">
+        <div className="mx-auto flex items-center justify-between">
           <img src="/logo.svg" alt="Nestack" className="h-7" />
           <div className="flex items-center gap-3">
             <span className={cn(
@@ -49,7 +49,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <Page className="pb-24 lg:pb-8">
+      <Page className="pb-24">
         {/* 인사말 섹션 */}
         <section className="mb-6">
           <div className="flex items-center gap-3 mb-2">

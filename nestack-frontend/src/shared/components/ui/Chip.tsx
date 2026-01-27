@@ -16,9 +16,9 @@ const chipVariants = cva(
         ghost: 'text-stone-600 hover:bg-stone-100',
       },
       size: {
-        sm: 'h-7 px-2.5 text-xs rounded-lg',
-        md: 'h-8 px-3 text-sm rounded-xl',
-        lg: 'h-10 px-4 text-sm rounded-xl',
+        sm: 'h-9 min-h-[36px] px-3 text-xs rounded-lg',   // 36px (밀집 레이아웃용)
+        md: 'h-10 min-h-[40px] px-3.5 text-sm rounded-xl', // 40px
+        lg: 'h-11 min-h-[44px] px-4 text-sm rounded-xl',   // 44px (권장)
       },
     },
     defaultVariants: {

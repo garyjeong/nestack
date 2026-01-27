@@ -53,13 +53,13 @@ export default function MissionsPage() {
   return (
     <AppShell>
       {/* 모바일 헤더 */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3 lg:hidden">
-        <div className="mx-auto max-w-lg">
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3">
+        <div className="mx-auto">
           <h1 className="text-xl font-bold text-stone-900">미션</h1>
         </div>
       </header>
 
-      <Page className="pb-24 lg:pb-8">
+      <Page className="pb-24">
         {/* 게이미피케이션 배너 */}
         <section className="mb-6">
           <Card className="gradient-primary p-5 text-white relative overflow-hidden">
@@ -93,20 +93,6 @@ export default function MissionsPage() {
             </div>
           </Card>
         </section>
-
-        {/* 데스크탑 헤더 */}
-        <div className="hidden lg:flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-stone-900">미션</h1>
-            <p className="text-stone-500 text-sm mt-1">목표를 설정하고 함께 달성해요</p>
-          </div>
-          <Link to="/missions/create">
-            <button className="inline-flex items-center gap-2 h-12 px-5 rounded-xl gradient-primary text-white font-semibold shadow-md hover:shadow-lg transition-all active:scale-[0.98]">
-              <Plus className="h-5 w-5" />
-              새 미션 만들기
-            </button>
-          </Link>
-        </div>
 
         {/* 요약 통계 */}
         {summary && (
@@ -286,13 +272,15 @@ export default function MissionsPage() {
         </section>
       </Page>
 
-      {/* FAB - 그래디언트 스타일 */}
-      <Link
-        to="/missions/create"
-        className="fixed bottom-20 right-4 flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 lg:hidden"
-      >
-        <Plus className="h-6 w-6" />
-      </Link>
+      {/* FAB - 앱 컨테이너 내 고정 */}
+      <div className="fixed bottom-20 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 pointer-events-none">
+        <Link
+          to="/missions/create"
+          className="absolute bottom-0 right-4 flex h-14 w-14 items-center justify-center rounded-2xl gradient-primary text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 pointer-events-auto"
+        >
+          <Plus className="h-6 w-6" />
+        </Link>
+      </div>
     </AppShell>
   )
 }

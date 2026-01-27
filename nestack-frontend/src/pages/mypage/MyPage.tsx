@@ -36,13 +36,13 @@ export default function MyPage() {
   return (
     <AppShell>
       {/* 모바일 헤더 */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3 lg:hidden">
-        <div className="mx-auto max-w-lg">
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3">
+        <div className="mx-auto">
           <h1 className="text-xl font-bold text-stone-900">마이페이지</h1>
         </div>
       </header>
 
-      <Page className="pb-24 lg:pb-8">
+      <Page className="pb-24">
         {/* 프로필 섹션 - 중앙 정렬 */}
         <section className="mb-6">
           <Card className="p-6 text-center">

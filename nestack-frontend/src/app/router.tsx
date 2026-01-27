@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 
 // Lazy load pages for code splitting
 import { lazy, Suspense } from 'react';
+import { PageTransition } from '@/shared/components/layout';
 
 // Auth Pages
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -40,11 +41,13 @@ function PageLoader() {
   );
 }
 
-// Helper function to wrap lazy components with Suspense
+// Helper function to wrap lazy components with Suspense and PageTransition
 function withSuspense(Component: React.LazyExoticComponent<() => React.JSX.Element>) {
   return (
     <Suspense fallback={<PageLoader />}>
-      <Component />
+      <PageTransition>
+        <Component />
+      </PageTransition>
     </Suspense>
   );
 }

@@ -129,7 +129,7 @@ export default function BadgesPage() {
     <AppShell showBottomNav={false}>
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm">
-        <div className="mx-auto flex max-w-full items-center gap-4 sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
             className="rounded-lg p-1 text-stone-600 transition-colors hover:bg-stone-100"
@@ -140,12 +140,12 @@ export default function BadgesPage() {
         </div>
       </header>
 
-      <Page narrow>
+      <Page>
         {isLoading ? (
           <div className="space-y-6">
             <section>
               <Skeleton className="mb-4 h-6 w-32" />
-              <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
+              <div className="grid grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Card key={i} className="p-4">
                     <Skeleton className="mx-auto mb-2 h-16 w-16 rounded-full" />
@@ -169,7 +169,7 @@ export default function BadgesPage() {
                   <p className="mt-1 text-sm text-stone-400">미션을 완료하여 뱃지를 획득해보세요!</p>
                 </Card>
               ) : (
-                <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
+                <div className="grid grid-cols-3 gap-4">
                   {earnedBadges.map((userBadge: UserBadge) => (
                     <BadgeCard
                       key={userBadge.id}
@@ -193,7 +193,7 @@ export default function BadgesPage() {
                   <p className="text-stone-500">모든 뱃지를 획득했습니다!</p>
                 </Card>
               ) : (
-                <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
+                <div className="grid grid-cols-3 gap-4">
                   {availableBadges.map((badge: Badge) => (
                     <BadgeCard
                       key={badge.id}

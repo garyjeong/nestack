@@ -28,3 +28,5 @@ export { StatCard, SimpleStat, MiniStat } from './StatCard'
 
 export { Chip, ChipGroup, SelectableChipGroup, chipVariants } from './Chip'
 export type { ChipProps } from './Chip'
+
+export { VirtualList } from './VirtualList'

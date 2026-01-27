@@ -199,8 +199,11 @@ export default function FamilySettingsPage() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white shadow-lg border-t border-stone-200">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
+      <div
+        className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 bg-white shadow-lg border-t border-stone-200 px-4"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))', paddingTop: '1rem' }}
+      >
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             {hasPendingChanges && (
               <span className="flex items-center gap-1 text-sm text-amber-600">

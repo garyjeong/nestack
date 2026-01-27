@@ -65,18 +65,16 @@ export default function MissionDetailPage() {
     return (
       <AppShell showBottomNav={false}>
         <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm">
-          <div className="mx-auto flex max-w-full items-center gap-4 sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
+          <div className="flex items-center gap-4">
             <Skeleton className="h-6 w-6 rounded" />
             <Skeleton className="h-6 w-32" />
           </div>
         </header>
         <Page>
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-6">
-              <Skeleton className="h-40 w-full rounded-xl" />
-              <Skeleton className="h-60 w-full rounded-xl" />
-            </div>
-            <Skeleton className="hidden h-80 w-full rounded-xl md:block" />
+          <div className="space-y-6">
+            <Skeleton className="h-40 w-full rounded-xl" />
+            <Skeleton className="h-60 w-full rounded-xl" />
+            <Skeleton className="h-32 w-full rounded-xl" />
           </div>
         </Page>
       </AppShell>
@@ -108,7 +106,7 @@ export default function MissionDetailPage() {
     <AppShell showBottomNav={false}>
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm">
-        <div className="mx-auto flex max-w-full items-center justify-between sm:max-w-xl md:max-w-3xl lg:max-w-4xl">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
@@ -159,125 +157,76 @@ export default function MissionDetailPage() {
         </div>
       </header>
 
-      <Page className="pb-24 lg:pb-6">
-        {/* Two-column layout for desktop */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Left column: Mission Info + Progress */}
-          <div className="space-y-6">
-            {/* Mission Info */}
-            <Card className="p-6">
-              <div className="mb-4 flex items-start justify-between">
-                <Badge variant={status.variant}>{status.label}</Badge>
-                {mission.category && (
-                  <span className="text-sm text-stone-500">{mission.category.name}</span>
-                )}
-              </div>
-              <h2 className="mb-2 text-2xl font-bold text-stone-900">{mission.name}</h2>
-              {mission.description && (
-                <p className="text-stone-500">{mission.description}</p>
-              )}
-            </Card>
-
-            {/* Progress */}
-            <Card className="p-6">
-              <h3 className="mb-4 font-semibold text-stone-900">진행 현황</h3>
-              <MissionProgress
-                currentAmount={mission.currentAmount}
-                targetAmount={mission.targetAmount}
-                progress={mission.progress}
-              />
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <div className="rounded-lg bg-stone-50 p-4 text-center">
-                  <Calendar className="mx-auto mb-2 h-5 w-5 text-stone-400" />
-                  <p className="text-sm text-stone-500">남은 기간</p>
-                  <p className="text-lg font-bold text-stone-900">{mission.daysRemaining}일</p>
-                </div>
-                <div className="rounded-lg bg-stone-50 p-4 text-center">
-                  <Target className="mx-auto mb-2 h-5 w-5 text-stone-400" />
-                  <p className="text-sm text-stone-500">월 목표</p>
-                  <p className="text-lg font-bold text-stone-900">{formatAmount(monthlyTarget)}원</p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Desktop Action Buttons */}
-            <div className="hidden gap-3 md:flex">
-              {mission.status === 'pending' && (
-                <Button
-                  onClick={() => handleStatusChange('in_progress')}
-                  className="flex-1"
-                  isLoading={isUpdating}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  시작하기
-                </Button>
-              )}
-              {mission.status === 'in_progress' && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStatusChange('failed')}
-                    className="flex-1"
-                    isLoading={isUpdating}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    실패
-                  </Button>
-                  <Button
-                    onClick={() => handleStatusChange('completed')}
-                    className="flex-1"
-                    isLoading={isUpdating}
-                  >
-                    <Check className="mr-2 h-4 w-4" />
-                    완료
-                  </Button>
-                </>
-              )}
-              {(mission.status === 'completed' || mission.status === 'failed') && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleStatusChange('in_progress')}
-                  className="flex-1"
-                  isLoading={isUpdating}
-                >
-                  다시 시작
-                </Button>
+      <Page className="pb-24">
+        <div className="space-y-6">
+          {/* Mission Info */}
+          <Card className="p-6">
+            <div className="mb-4 flex items-start justify-between">
+              <Badge variant={status.variant}>{status.label}</Badge>
+              {mission.category && (
+                <span className="text-sm text-stone-500">{mission.category.name}</span>
               )}
             </div>
-          </div>
-
-          {/* Right column: Date Info + Sub Missions */}
-          <div className="space-y-6">
-            {/* Date Info */}
-            <Card className="p-6">
-              <h3 className="mb-4 font-semibold text-stone-900">기간</h3>
-              <div className="flex items-center justify-between text-sm">
-                <div>
-                  <p className="text-stone-500">시작일</p>
-                  <p className="font-medium text-stone-900">{formatDate(mission.startDate)}</p>
-                </div>
-                <div className="mx-4 h-0.5 flex-1 bg-stone-200" />
-                <div className="text-right">
-                  <p className="text-stone-500">종료일</p>
-                  <p className="font-medium text-stone-900">{formatDate(mission.endDate)}</p>
-                </div>
-              </div>
-            </Card>
-
-            {/* Sub Missions */}
-            {mission.subMissions && mission.subMissions.length > 0 && (
-              <div>
-                <h3 className="mb-4 px-1 font-semibold text-stone-900">하위 미션</h3>
-                <MissionList missions={mission.subMissions} />
-              </div>
+            <h2 className="mb-2 text-2xl font-bold text-stone-900">{mission.name}</h2>
+            {mission.description && (
+              <p className="text-stone-500">{mission.description}</p>
             )}
-          </div>
+          </Card>
+
+          {/* Progress */}
+          <Card className="p-6">
+            <h3 className="mb-4 font-semibold text-stone-900">진행 현황</h3>
+            <MissionProgress
+              currentAmount={mission.currentAmount}
+              targetAmount={mission.targetAmount}
+              progress={mission.progress}
+            />
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div className="rounded-lg bg-stone-50 p-4 text-center">
+                <Calendar className="mx-auto mb-2 h-5 w-5 text-stone-400" />
+                <p className="text-sm text-stone-500">남은 기간</p>
+                <p className="text-lg font-bold text-stone-900">{mission.daysRemaining}일</p>
+              </div>
+              <div className="rounded-lg bg-stone-50 p-4 text-center">
+                <Target className="mx-auto mb-2 h-5 w-5 text-stone-400" />
+                <p className="text-sm text-stone-500">월 목표</p>
+                <p className="text-lg font-bold text-stone-900">{formatAmount(monthlyTarget)}원</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Date Info */}
+          <Card className="p-6">
+            <h3 className="mb-4 font-semibold text-stone-900">기간</h3>
+            <div className="flex items-center justify-between text-sm">
+              <div>
+                <p className="text-stone-500">시작일</p>
+                <p className="font-medium text-stone-900">{formatDate(mission.startDate)}</p>
+              </div>
+              <div className="mx-4 h-0.5 flex-1 bg-stone-200" />
+              <div className="text-right">
+                <p className="text-stone-500">종료일</p>
+                <p className="font-medium text-stone-900">{formatDate(mission.endDate)}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Sub Missions */}
+          {mission.subMissions && mission.subMissions.length > 0 && (
+            <div>
+              <h3 className="mb-4 px-1 font-semibold text-stone-900">하위 미션</h3>
+              <MissionList missions={mission.subMissions} />
+            </div>
+          )}
         </div>
       </Page>
 
-      {/* Bottom Actions - Mobile only */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-stone-200 bg-white p-4 md:hidden">
-        <div className="mx-auto flex max-w-lg gap-3">
+      {/* Bottom Actions */}
+      <div
+        className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 border-t border-stone-200 bg-white px-4"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))', paddingTop: '1rem' }}
+      >
+        <div className="flex gap-3">
           {mission.status === 'pending' && (
             <Button
               onClick={() => handleStatusChange('in_progress')}

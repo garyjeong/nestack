@@ -158,7 +158,7 @@ export default function MissionCreatePage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 py-6">
+        <main className="mx-auto px-4 py-6">
           <p className="mb-6 text-stone-600">
             어떤 목표를 위해 미션을 만드시나요?
           </p>
@@ -218,7 +218,7 @@ export default function MissionCreatePage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 py-6">
+        <main className="mx-auto px-4 py-6">
           <p className="mb-6 text-stone-600">
             추천 템플릿을 선택하거나 직접 만들어보세요.
           </p>
@@ -300,7 +300,7 @@ export default function MissionCreatePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 py-6">
+      <main className="mx-auto px-4 py-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic Info */}
           <Card className="p-6">
@@ -420,8 +420,11 @@ export default function MissionCreatePage() {
           </Card>
 
           {/* Submit Button */}
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-4">
-            <div className="mx-auto max-w-lg">
+          <div
+              className="fixed bottom-0 left-1/2 z-30 w-full max-w-[480px] -translate-x-1/2 bg-white border-t border-stone-200 px-4"
+              style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))', paddingTop: '1rem' }}
+            >
+            <div>
               <Button
                 type="submit"
                 className="w-full"

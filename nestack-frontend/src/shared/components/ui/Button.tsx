@@ -27,13 +27,13 @@ const buttonVariants = cva(
         dark: 'bg-stone-900 text-white hover:bg-stone-800 focus-visible:ring-stone-500 shadow-sm',
       },
       size: {
-        xs: 'h-8 px-3 text-xs rounded-lg',
-        sm: 'h-10 px-4 text-sm rounded-xl',
-        md: 'h-12 px-5 text-base rounded-xl',
-        lg: 'h-14 px-6 text-lg rounded-2xl',
-        xl: 'h-16 px-8 text-lg rounded-2xl',
-        icon: 'h-10 w-10 rounded-xl',
-        'icon-lg': 'h-12 w-12 rounded-xl',
+        xs: 'h-9 min-h-[44px] px-3 text-xs rounded-lg',  // 최소 44px 터치 영역
+        sm: 'h-11 px-4 text-sm rounded-xl',               // 44px
+        md: 'h-12 px-5 text-base rounded-xl',             // 48px
+        lg: 'h-14 px-6 text-lg rounded-2xl',              // 56px
+        xl: 'h-16 px-8 text-lg rounded-2xl',              // 64px
+        icon: 'h-11 w-11 rounded-xl',                     // 44px
+        'icon-lg': 'h-12 w-12 rounded-xl',                // 48px
       },
       fullWidth: {
         true: 'w-full',

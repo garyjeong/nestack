@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { BottomNav } from './BottomNav'
-import { SideNav } from './SideNav'
 import { cn } from '@/shared/utils/cn'
 import { useSSE } from '@/features/realtime/hooks'
 
@@ -10,81 +9,66 @@ function SSEManager() {
   return null
 }
 
+/** 앱 최대 너비 (모바일 앱 스타일) */
+const APP_MAX_WIDTH = 'max-w-[480px]'
+
 interface AppShellProps {
   children: ReactNode
   showBottomNav?: boolean
-  showSideNav?: boolean
   className?: string
 }
 
 export function AppShell({
   children,
   showBottomNav = true,
-  showSideNav = true,
   className,
 }: AppShellProps) {
   return (
-    <div className={cn('min-h-screen bg-stone-50', className)}>
+    <div className="min-h-screen bg-stone-100">
       {/* SSE Connection Manager */}
       <SSEManager />
 
-      {/* SideNav - Desktop only */}
-      {showSideNav && <SideNav />}
+      {/* App Container - 모바일 앱 스타일 중앙 정렬 */}
+      <div className={cn(
+        'relative mx-auto min-h-screen bg-stone-50 shadow-xl pt-safe',
+        APP_MAX_WIDTH,
+        className
+      )}>
+        {/* Main content area */}
+        <main className={cn(showBottomNav && 'pb-20')}>
+          {children}
+        </main>
 
-      {/* Main content area */}
-      <div className={cn(showSideNav && 'lg:pl-64')}>
-        <main className={cn(showBottomNav && 'pb-20 lg:pb-0')}>{children}</main>
+        {/* BottomNav - 앱 컨테이너 내부에 고정 */}
+        {showBottomNav && <BottomNav />}
       </div>
-
-      {/* BottomNav - Mobile/Tablet only */}
-      {showBottomNav && <BottomNav />}
     </div>
   )
 }
 
-// Container for max-width content - Responsive
+// Container for content with padding
 interface ContainerProps {
   children: ReactNode
   className?: string
-  /** Use narrow width (for mobile-like pages) */
-  narrow?: boolean
 }
 
-export function Container({ children, className, narrow = false }: ContainerProps) {
+export function Container({ children, className }: ContainerProps) {
   return (
-    <div
-      className={cn(
-        'mx-auto px-4 sm:px-6',
-        narrow
-          ? 'max-w-lg' // 512px - for narrow content
-          : 'max-w-full sm:max-w-xl md:max-w-3xl lg:max-w-4xl', // Responsive widths
-        className
-      )}
-    >
+    <div className={cn('px-4', className)}>
       {children}
     </div>
   )
 }
 
-// Page wrapper with padding - Responsive
+// Page wrapper with padding
 interface PageProps {
   children: ReactNode
   className?: string
-  /** Use narrow width (for mobile-like pages) */
-  narrow?: boolean
 }
 
-export function Page({ children, className, narrow = false }: PageProps) {
+export function Page({ children, className }: PageProps) {
   return (
-    <div
-      className={cn(
-        'mx-auto px-4 py-6 sm:px-6 lg:px-8',
-        narrow
-          ? 'max-w-lg' // 512px - for narrow content
-          : 'max-w-full sm:max-w-xl md:max-w-3xl lg:max-w-4xl', // Responsive widths
-        className
-      )}
-    >
+    <div className={cn('px-4 py-6', className)}>
       {children}
     </div>
   )

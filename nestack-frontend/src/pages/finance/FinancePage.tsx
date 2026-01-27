@@ -38,8 +38,8 @@ export default function FinancePage() {
   return (
     <AppShell>
       {/* 모바일 헤더 */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3 lg:hidden">
-        <div className="mx-auto flex max-w-lg items-center justify-between">
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md px-4 py-3">
+        <div className="mx-auto flex items-center justify-between">
           <h1 className="text-xl font-bold text-stone-900">가계부</h1>
           {accounts.length > 0 && (
             <button
@@ -53,37 +53,7 @@ export default function FinancePage() {
         </div>
       </header>
 
-      <Page className="pb-24 lg:pb-8">
-        {/* 데스크탑 헤더 */}
-        <div className="hidden lg:flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-stone-900">가계부</h1>
-            <p className="text-stone-500 text-sm mt-1">계좌와 거래를 한눈에 관리해요</p>
-          </div>
-          <div className="flex gap-3">
-            {accounts.length > 0 && (
-              <button
-                onClick={() => syncAllAccounts()}
-                disabled={isSyncing}
-                className="inline-flex items-center gap-2 h-11 px-4 rounded-xl border border-stone-200 text-stone-700 font-medium hover:bg-stone-50 transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
-                동기화
-              </button>
-            )}
-            {!isConnected && (
-              <button
-                onClick={handleConnectBank}
-                disabled={isAuthLoading}
-                className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" />
-                계좌 연결
-              </button>
-            )}
-          </div>
-        </div>
-
+      <Page className="pb-24">
         {/* 총 자산 카드 */}
         <section className="mb-6">
           {isSummaryLoading ? (
@@ -151,8 +121,7 @@ export default function FinancePage() {
           ) : null}
         </section>
 
-        {/* 2열 레이아웃 */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
           {/* 연결된 계좌 */}
           <section>
             <div className="flex items-center justify-between mb-4">
