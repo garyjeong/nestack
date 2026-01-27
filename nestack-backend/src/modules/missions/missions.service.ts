@@ -164,7 +164,7 @@ export class MissionsService {
       });
     }
 
-    queryBuilder.orderBy('mission.created_at', 'DESC');
+    queryBuilder.orderBy('mission.createdAt', 'DESC');
     queryBuilder.skip(skip).take(limit);
 
     const [missions, totalItems] = await queryBuilder.getManyAndCount();

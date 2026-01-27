@@ -344,13 +344,16 @@ export class AuthService {
     const accessTokenExpiry = this.configService.get('jwt.accessTokenExpiresIn');
     const refreshTokenExpiry = this.configService.get('jwt.refreshTokenExpiresIn');
 
+    // Add jti (JWT ID) to ensure unique tokens even when generated at the same timestamp
+    const jti = crypto.randomUUID();
+
     const accessToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, type: 'access' },
+      { sub: user.id, email: user.email, type: 'access', jti },
       { expiresIn: accessTokenExpiry },
     );
 
     const refreshToken = this.jwtService.sign(
-      { sub: user.id, email: user.email, type: 'refresh' },
+      { sub: user.id, email: user.email, type: 'refresh', jti },
       { expiresIn: refreshTokenExpiry },
     );
 

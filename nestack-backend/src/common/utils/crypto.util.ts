@@ -1,5 +1,4 @@
 import * as bcrypt from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
 const SALT_ROUNDS = 12;
@@ -16,7 +15,7 @@ export async function comparePassword(
 }
 
 export function generateUuid(): string {
-  return uuidv4();
+  return crypto.randomUUID();
 }
 
 export function generateRandomToken(length = 32): string {

@@ -210,7 +210,10 @@ export class AdminService {
   }
 
   async deleteCategory(id: string): Promise<void> {
-    await this.categoryRepository.delete({ id });
+    const result = await this.categoryRepository.delete({ id });
+    if (result.affected === 0) {
+      throw new CategoryNotFoundException();
+    }
   }
 
   // Templates
@@ -254,7 +257,10 @@ export class AdminService {
   }
 
   async deleteTemplate(id: string): Promise<void> {
-    await this.templateRepository.delete({ id });
+    const result = await this.templateRepository.delete({ id });
+    if (result.affected === 0) {
+      throw new TemplateNotFoundException();
+    }
   }
 
   // Badges
@@ -381,6 +387,9 @@ export class AdminService {
   }
 
   async deleteAnnouncement(id: string): Promise<void> {
-    await this.announcementRepository.delete({ id });
+    const result = await this.announcementRepository.delete({ id });
+    if (result.affected === 0) {
+      throw new AnnouncementNotFoundException();
+    }
   }
 }
