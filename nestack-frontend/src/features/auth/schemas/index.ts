@@ -19,6 +19,7 @@ export const signupSchema = z.object({
   password: z
     .string()
     .min(8, '비밀번호는 8자 이상이어야 합니다')
+    .max(30, '비밀번호는 30자 이하여야 합니다')
     .regex(
       /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
       '비밀번호는 영문, 숫자, 특수문자를 포함해야 합니다'
@@ -44,6 +45,7 @@ export const resetPasswordSchema = z.object({
   password: z
     .string()
     .min(8, '비밀번호는 8자 이상이어야 합니다')
+    .max(30, '비밀번호는 30자 이하여야 합니다')
     .regex(
       /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
       '비밀번호는 영문, 숫자, 특수문자를 포함해야 합니다'

@@ -24,7 +24,7 @@ export class SignupDto {
   })
   @IsString()
   @MinLength(8, { message: '비밀번호는 8자 이상이어야 합니다' })
-  @MaxLength(100, { message: '비밀번호는 100자 이하여야 합니다' })
+  @MaxLength(30, { message: '비밀번호는 30자 이하여야 합니다' })
   @Matches(PASSWORD_REGEX, { message: PASSWORD_MESSAGE })
   password: string;
 
