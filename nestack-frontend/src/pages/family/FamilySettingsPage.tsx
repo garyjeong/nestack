@@ -6,6 +6,7 @@ import { showToast } from '@/shared/components/feedback/Toast';
 import { Button } from '@/shared/components/ui/Button';
 import { AlertTriangle, AlertCircle, X, Shield, ChevronRight } from 'lucide-react';
 import { Input } from '@/shared/components/ui/Input';
+import { AnimatedList, AnimatedItem } from '@/shared/components/layout';
 
 type ShareStatusType = 'FULL' | 'BALANCE_ONLY' | 'PRIVATE';
 
@@ -140,9 +141,10 @@ export default function FamilySettingsPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <AnimatedList className="space-y-4">
           {accounts.map((account: Account) => (
-            <div key={account.id} className="rounded-xl bg-white p-6 shadow-lg">
+            <AnimatedItem key={account.id}>
+              <div className="rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <Shield className="h-5 w-5 text-stone-600" />
@@ -191,12 +193,13 @@ export default function FamilySettingsPage() {
                       </>
                     )}
                   </span>
-                  <ChevronRight className="h-4 w-4 text-store-400" />
+                  <ChevronRight className="h-4 w-4 text-stone-400" />
                 </div>
               </div>
-            </div>
+              </div>
+            </AnimatedItem>
           ))}
-        </div>
+        </AnimatedList>
       )}
 
       <div

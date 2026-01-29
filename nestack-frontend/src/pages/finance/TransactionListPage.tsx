@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Filter } from 'lucide-react'
 import { Button } from '@/shared/components/ui/Button'
+import { AnimatedSection } from '@/shared/components/layout'
 import { TransactionList, VirtualTransactionList } from '@/features/finance/components'
 import { useTransactions, useAccounts } from '@/features/finance/hooks'
 import type { TransactionFilters } from '@/features/finance/types'
@@ -86,7 +87,7 @@ export default function TransactionListPage() {
 
       <main className="mx-auto px-4 py-6">
         {/* Filters */}
-        <div className="mb-6 space-y-3">
+        <AnimatedSection delay={0} className="mb-6 space-y-3">
           {/* Account Filter */}
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             <button
@@ -139,10 +140,11 @@ export default function TransactionListPage() {
               ))}
             </select>
           </div>
-        </div>
+        </AnimatedSection>
 
         {/* Transaction List - 20개 이상일 때 Virtual List 사용 */}
-        {transactions.length > 20 ? (
+        <AnimatedSection delay={0.1}>
+          {transactions.length > 20 ? (
           <VirtualTransactionList
             transactions={transactions}
             isLoading={isLoading}
@@ -158,6 +160,7 @@ export default function TransactionListPage() {
             emptyMessage="조건에 맞는 거래 내역이 없습니다"
           />
         )}
+        </AnimatedSection>
       </main>
     </div>
   )

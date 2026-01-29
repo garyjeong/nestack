@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { BottomNav } from './BottomNav'
 import { cn } from '@/shared/utils/cn'
 import { useSSE } from '@/features/realtime/hooks'
+import { SkipLink } from '@/shared/components/a11y'
 
 // SSE Connection Manager - renders nothing, just manages connection
 function SSEManager() {
@@ -11,6 +12,9 @@ function SSEManager() {
 
 /** 앱 최대 너비 (모바일 앱 스타일) */
 const APP_MAX_WIDTH = 'max-w-[480px]'
+
+/** 메인 콘텐츠 ID (접근성용) */
+const MAIN_CONTENT_ID = 'main-content'
 
 interface AppShellProps {
   children: ReactNode
@@ -24,18 +28,25 @@ export function AppShell({
   className,
 }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-stone-100">
+    <div className="min-h-screen bg-stone-100 dark:bg-stone-950">
+      {/* Skip to main content link for keyboard users */}
+      <SkipLink targetId={MAIN_CONTENT_ID} />
+
       {/* SSE Connection Manager */}
       <SSEManager />
 
       {/* App Container - 모바일 앱 스타일 중앙 정렬 */}
       <div className={cn(
-        'relative mx-auto min-h-screen bg-stone-50 shadow-xl pt-safe',
+        'relative mx-auto min-h-screen bg-stone-50 dark:bg-stone-900 shadow-xl dark:shadow-stone-950/50 pt-safe',
         APP_MAX_WIDTH,
         className
       )}>
         {/* Main content area */}
-        <main className={cn(showBottomNav && 'pb-20')}>
+        <main
+          id={MAIN_CONTENT_ID}
+          tabIndex={-1}
+          className={cn('focus:outline-none', showBottomNav && 'pb-20')}
+        >
           {children}
         </main>
 

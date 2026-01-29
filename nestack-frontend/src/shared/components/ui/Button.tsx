@@ -2,8 +2,8 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 
 const buttonVariants = cva(
-  // Base styles - Toss style
-  'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
+  // Base styles - Toss style with enhanced accessibility
+  'inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-stone-900 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
   {
     variants: {
       variant: {
@@ -11,18 +11,26 @@ const buttonVariants = cva(
         primary: 'bg-primary-500 text-white hover:bg-primary-600 focus-visible:ring-primary-500 shadow-sm hover:shadow-md',
         // Gradient - 토스 메인 버튼 스타일
         gradient: 'gradient-primary text-white shadow-md hover:shadow-lg focus-visible:ring-primary-500',
+        // Accent
+        accent: 'bg-accent-500 text-white hover:bg-accent-600 focus-visible:ring-accent-500 shadow-sm hover:shadow-md',
+        // Success
+        success: 'bg-emerald-500 text-white hover:bg-emerald-600 focus-visible:ring-emerald-500 shadow-sm',
         // Secondary
-        secondary: 'bg-stone-100 text-stone-700 hover:bg-stone-200 focus-visible:ring-stone-400',
+        secondary: 'bg-stone-100 text-stone-700 hover:bg-stone-200 focus-visible:ring-stone-400 dark:bg-stone-700 dark:text-stone-200 dark:hover:bg-stone-600',
         // Outline
-        outline: 'border-2 border-primary-500 text-primary-600 hover:bg-primary-50 focus-visible:ring-primary-500',
+        outline: 'border-2 border-primary-500 text-primary-600 hover:bg-primary-50 focus-visible:ring-primary-500 dark:text-primary-400 dark:hover:bg-primary-950',
+        // Outline Accent
+        'outline-accent': 'border-2 border-accent-500 text-accent-600 hover:bg-accent-50 focus-visible:ring-accent-500 dark:text-accent-400 dark:hover:bg-accent-950',
         // Ghost
-        ghost: 'text-stone-600 hover:bg-stone-100 focus-visible:ring-stone-400',
+        ghost: 'text-stone-600 hover:bg-stone-100 focus-visible:ring-stone-400 dark:text-stone-300 dark:hover:bg-stone-800',
         // Danger
         danger: 'bg-red-500 text-white hover:bg-red-600 focus-visible:ring-red-500 shadow-sm',
         // Soft - 배경이 연한 버튼
-        soft: 'bg-primary-50 text-primary-600 hover:bg-primary-100 focus-visible:ring-primary-500',
+        soft: 'bg-primary-50 text-primary-600 hover:bg-primary-100 focus-visible:ring-primary-500 dark:bg-primary-950 dark:text-primary-400 dark:hover:bg-primary-900',
+        // Soft Accent
+        'soft-accent': 'bg-accent-50 text-accent-600 hover:bg-accent-100 focus-visible:ring-accent-500 dark:bg-accent-950 dark:text-accent-400 dark:hover:bg-accent-900',
         // Link
-        link: 'text-primary-600 underline-offset-4 hover:underline focus-visible:ring-primary-500 p-0 h-auto',
+        link: 'text-primary-600 underline-offset-4 hover:underline focus-visible:ring-primary-500 p-0 h-auto dark:text-primary-400',
         // Dark
         dark: 'bg-stone-900 text-white hover:bg-stone-800 focus-visible:ring-stone-500 shadow-sm',
       },
@@ -70,6 +78,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <circle
                 className="opacity-25"
@@ -85,7 +94,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span>로딩중...</span>
+            <span aria-live="polite">로딩중...</span>
           </>
         ) : (
           <>

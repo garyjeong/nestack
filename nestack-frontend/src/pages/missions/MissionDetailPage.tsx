@@ -11,7 +11,7 @@ import {
   Edit,
   Trash2,
 } from 'lucide-react'
-import { AppShell, Page } from '@/shared/components/layout'
+import { AppShell, Page, AnimatedSection } from '@/shared/components/layout'
 import { Button } from '@/shared/components/ui/Button'
 import { Badge } from '@/shared/components/ui/Badge'
 import { Card } from '@/shared/components/ui/Card'
@@ -160,7 +160,8 @@ export default function MissionDetailPage() {
       <Page className="pb-24">
         <div className="space-y-6">
           {/* Mission Info */}
-          <Card className="p-6">
+          <AnimatedSection delay={0}>
+            <Card className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <Badge variant={status.variant}>{status.label}</Badge>
               {mission.category && (
@@ -172,9 +173,11 @@ export default function MissionDetailPage() {
               <p className="text-stone-500">{mission.description}</p>
             )}
           </Card>
+          </AnimatedSection>
 
           {/* Progress */}
-          <Card className="p-6">
+          <AnimatedSection delay={0.1}>
+            <Card className="p-6">
             <h3 className="mb-4 font-semibold text-stone-900">진행 현황</h3>
             <MissionProgress
               currentAmount={mission.currentAmount}
@@ -194,10 +197,12 @@ export default function MissionDetailPage() {
               </div>
             </div>
           </Card>
+          </AnimatedSection>
 
           {/* Date Info */}
-          <Card className="p-6">
-            <h3 className="mb-4 font-semibold text-stone-900">기간</h3>
+          <AnimatedSection delay={0.2}>
+            <Card className="p-6">
+              <h3 className="mb-4 font-semibold text-stone-900">기간</h3>
             <div className="flex items-center justify-between text-sm">
               <div>
                 <p className="text-stone-500">시작일</p>
@@ -209,14 +214,15 @@ export default function MissionDetailPage() {
                 <p className="font-medium text-stone-900">{formatDate(mission.endDate)}</p>
               </div>
             </div>
-          </Card>
+            </Card>
+          </AnimatedSection>
 
           {/* Sub Missions */}
           {mission.subMissions && mission.subMissions.length > 0 && (
-            <div>
+            <AnimatedSection delay={0.3}>
               <h3 className="mb-4 px-1 font-semibold text-stone-900">하위 미션</h3>
               <MissionList missions={mission.subMissions} />
-            </div>
+            </AnimatedSection>
           )}
         </div>
       </Page>

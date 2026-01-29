@@ -14,11 +14,14 @@ import {
   Trash2,
   X,
   AlertTriangle,
+  Palette,
 } from 'lucide-react'
-import { AppShell, Page } from '@/shared/components/layout'
+import { AppShell, Page, AnimatedSection } from '@/shared/components/layout'
 import { Card } from '@/shared/components/ui/Card'
 import { Button } from '@/shared/components/ui/Button'
 import { Input } from '@/shared/components/ui/Input'
+import { ThemeToggle } from '@/shared/components/ui/ThemeToggle'
+import { ToggleSwitch } from '@/shared/components/ui/Interactions'
 import { useAppStore } from '@/app/store'
 import { apiClient } from '@/api/client'
 import { showToast } from '@/shared/components/feedback/Toast'
@@ -106,60 +109,66 @@ export default function SettingsPage() {
   return (
     <AppShell showBottomNav={false}>
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm">
+      <header className="sticky top-0 z-20 bg-white px-4 py-4 shadow-sm dark:bg-stone-900 dark:shadow-stone-800/50">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="rounded-lg p-1 text-stone-600 transition-colors hover:bg-stone-100"
+            className="rounded-lg p-1 text-stone-600 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <h1 className="text-xl font-bold text-stone-900">설정</h1>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100">설정</h1>
         </div>
       </header>
 
       <Page>
         <div className="space-y-6">
           {/* Notification Settings */}
-          <section>
+          <AnimatedSection delay={0}>
             <h3 className="mb-3 text-lg font-semibold text-stone-900">알림</h3>
             <Card className="divide-y divide-stone-100">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
-                  <Bell className="h-5 w-5 text-stone-500" />
-                  <span className="text-stone-900">푸시 알림</span>
+                  <Bell className="h-5 w-5 text-stone-500 dark:text-stone-400" />
+                  <span className="text-stone-900 dark:text-stone-100">푸시 알림</span>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    className="peer sr-only"
-                    checked={notifications.pushEnabled}
-                    onChange={() => handleNotificationChange('pushEnabled')}
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full" />
-                </label>
+                <ToggleSwitch
+                  checked={notifications.pushEnabled}
+                  onChange={() => handleNotificationChange('pushEnabled')}
+                  label="푸시 알림 설정"
+                />
               </div>
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-stone-500" />
-                  <span className="text-stone-900">이메일 알림</span>
+                  <Mail className="h-5 w-5 text-stone-500 dark:text-stone-400" />
+                  <span className="text-stone-900 dark:text-stone-100">이메일 알림</span>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    className="peer sr-only"
-                    checked={notifications.emailEnabled}
-                    onChange={() => handleNotificationChange('emailEnabled')}
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-stone-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full" />
-                </label>
+                <ToggleSwitch
+                  checked={notifications.emailEnabled}
+                  onChange={() => handleNotificationChange('emailEnabled')}
+                  label="이메일 알림 설정"
+                />
               </div>
             </Card>
-          </section>
+          </AnimatedSection>
+
+          {/* Theme Settings */}
+          <AnimatedSection delay={0.1}>
+            <h3 className="mb-3 text-lg font-semibold text-stone-900 dark:text-stone-100">테마</h3>
+            <Card className="p-4 dark:bg-stone-800 dark:border-stone-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Palette className="h-5 w-5 text-stone-500 dark:text-stone-400" />
+                  <span className="text-stone-900 dark:text-stone-100">화면 모드</span>
+                </div>
+                <ThemeToggle />
+              </div>
+            </Card>
+          </AnimatedSection>
 
           {/* Share Settings */}
-          <section>
-            <h3 className="mb-3 text-lg font-semibold text-stone-900">공유 설정</h3>
+          <AnimatedSection delay={0.15}>
+            <h3 className="mb-3 text-lg font-semibold text-stone-900 dark:text-stone-100">공유 설정</h3>
             <Card className="p-4">
               <p className="mb-4 text-sm text-stone-500">파트너와 공유할 정보를 선택하세요</p>
               <div className="space-y-3">
@@ -192,10 +201,10 @@ export default function SettingsPage() {
                 </label>
               </div>
             </Card>
-          </section>
+          </AnimatedSection>
 
           {/* Account Settings */}
-          <section>
+          <AnimatedSection delay={0.25}>
             <h3 className="mb-3 text-lg font-semibold text-stone-900">계정</h3>
             <Card className="divide-y divide-stone-100">
               <Link
@@ -219,10 +228,10 @@ export default function SettingsPage() {
                 <ChevronRight className="h-5 w-5 text-stone-400" />
               </Link>
             </Card>
-          </section>
+          </AnimatedSection>
 
           {/* Other Settings */}
-          <section>
+          <AnimatedSection delay={0.35}>
             <h3 className="mb-3 text-lg font-semibold text-stone-900">기타</h3>
             <Card className="divide-y divide-stone-100">
               <Link
@@ -253,16 +262,18 @@ export default function SettingsPage() {
                 <span className="text-stone-500">1.0.0</span>
               </div>
             </Card>
-          </section>
+          </AnimatedSection>
 
           {/* Delete Account Button */}
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white py-4 text-red-500 transition-colors hover:bg-red-50"
-          >
-            <Trash2 className="h-5 w-5" />
-            <span className="font-medium">회원 탈퇴</span>
-          </button>
+          <AnimatedSection delay={0.45}>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white py-4 text-red-500 transition-colors hover:bg-red-50"
+            >
+              <Trash2 className="h-5 w-5" />
+              <span className="font-medium">회원 탈퇴</span>
+            </button>
+          </AnimatedSection>
         </div>
       </Page>
 

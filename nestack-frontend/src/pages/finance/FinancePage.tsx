@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { RefreshCw, Plus, TrendingUp, TrendingDown, Wallet, ChevronRight, Building2, CreditCard, PiggyBank } from 'lucide-react'
-import { AppShell, Page } from '@/shared/components/layout'
+import { AppShell, Page, AnimatedSection, AnimatedList, AnimatedItem } from '@/shared/components/layout'
 import { Card } from '@/shared/components/ui/Card'
 import { CurrencyDisplay } from '@/shared/components/ui/CountUpNumber'
+import { NoTransactionsEmpty } from '@/shared/components/feedback'
 import {
   useAccounts,
   useTransactions,
@@ -19,6 +20,7 @@ const bankIcons: Record<string, React.ReactNode> = {
 }
 
 export default function FinancePage() {
+  const navigate = useNavigate()
   const { accounts, isLoading: isAccountsLoading } = useAccounts()
   const { transactions, isLoading: isTransactionsLoading } = useTransactions({ limit: 5 })
   const { summary, isLoading: isSummaryLoading } = useFinanceSummary()
@@ -55,7 +57,7 @@ export default function FinancePage() {
 
       <Page className="pb-24">
         {/* 총 자산 카드 */}
-        <section className="mb-6">
+        <AnimatedSection className="mb-6" delay={0}>
           {isSummaryLoading ? (
             <Card className="p-6">
               <div className="animate-pulse space-y-4">
@@ -119,11 +121,11 @@ export default function FinancePage() {
               </div>
             </Card>
           ) : null}
-        </section>
+        </AnimatedSection>
 
         <div className="space-y-6">
           {/* 연결된 계좌 */}
-          <section>
+          <AnimatedSection delay={0.1}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-stone-900">연결된 계좌</h2>
               {accounts.length > 0 && (
@@ -167,29 +169,31 @@ export default function FinancePage() {
                 )}
               </Card>
             ) : (
-              <div className="space-y-3">
+              <AnimatedList className="space-y-3">
                 {accounts.map((account) => (
-                  <Card key={account.id} interactive className="p-4">
-                    <div className="flex items-center gap-3">
-                      {/* 은행 아이콘 */}
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100">
-                        <span className="text-stone-600">
-                          {bankIcons.default}
-                        </span>
-                      </div>
+                  <AnimatedItem key={account.id}>
+                    <Card interactive className="p-4">
+                      <div className="flex items-center gap-3">
+                        {/* 은행 아이콘 */}
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100">
+                          <span className="text-stone-600">
+                            {bankIcons.default}
+                          </span>
+                        </div>
 
-                      {/* 계좌 정보 */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-stone-900">{account.bankName}</p>
-                        <p className="text-sm text-stone-500 truncate">{account.accountNumber}</p>
-                      </div>
+                        {/* 계좌 정보 */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-stone-900">{account.bankName}</p>
+                          <p className="text-sm text-stone-500 truncate">{account.accountNumber}</p>
+                        </div>
 
-                      {/* 잔액 */}
-                      <p className="font-bold text-stone-900 tabular-nums">
-                        <CurrencyDisplay value={account.balance} duration={400} />
-                      </p>
-                    </div>
-                  </Card>
+                        {/* 잔액 */}
+                        <p className="font-bold text-stone-900 tabular-nums">
+                          <CurrencyDisplay value={account.balance} duration={400} />
+                        </p>
+                      </div>
+                    </Card>
+                  </AnimatedItem>
                 ))}
 
                 {/* 계좌 추가 */}
@@ -203,12 +207,12 @@ export default function FinancePage() {
                     <span className="font-medium">계좌 추가</span>
                   </button>
                 )}
-              </div>
+              </AnimatedList>
             )}
-          </section>
+          </AnimatedSection>
 
           {/* 최근 거래 */}
-          <section>
+          <AnimatedSection delay={0.2}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-stone-900">최근 거래</h2>
               <Link
@@ -233,57 +237,56 @@ export default function FinancePage() {
                 ))}
               </Card>
             ) : transactions.length === 0 ? (
-              <Card className="p-8 text-center">
-                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100">
-                  <Wallet className="h-7 w-7 text-stone-400" />
-                </div>
-                <p className="text-stone-500">거래 내역이 없어요</p>
-              </Card>
+              <NoTransactionsEmpty onAction={() => navigate('/finance/connect')} />
             ) : (
-              <Card className="divide-y divide-stone-100">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center gap-3 p-4">
-                    {/* 아이콘 */}
-                    <div
-                      className={cn(
-                        'flex h-10 w-10 items-center justify-center rounded-xl',
-                        tx.transactionType === 'deposit'
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-stone-100 text-stone-600'
-                      )}
-                    >
-                      {tx.transactionType === 'deposit' ? (
-                        <TrendingUp className="h-5 w-5" />
-                      ) : (
-                        <TrendingDown className="h-5 w-5" />
-                      )}
-                    </div>
+              <Card>
+                <AnimatedList className="divide-y divide-stone-100">
+                  {transactions.map((tx) => (
+                    <AnimatedItem key={tx.id}>
+                      <div className="flex items-center gap-3 p-4">
+                        {/* 아이콘 */}
+                        <div
+                          className={cn(
+                            'flex h-10 w-10 items-center justify-center rounded-xl',
+                            tx.transactionType === 'deposit'
+                              ? 'bg-green-100 text-green-600'
+                              : 'bg-stone-100 text-stone-600'
+                          )}
+                        >
+                          {tx.transactionType === 'deposit' ? (
+                            <TrendingUp className="h-5 w-5" />
+                          ) : (
+                            <TrendingDown className="h-5 w-5" />
+                          )}
+                        </div>
 
-                    {/* 설명 */}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-stone-900 truncate">
-                        {tx.description}
-                      </p>
-                      <p className="text-xs text-stone-500">
-                        {tx.bankAccount?.bankName}
-                      </p>
-                    </div>
+                        {/* 설명 */}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-stone-900 truncate">
+                            {tx.description}
+                          </p>
+                          <p className="text-xs text-stone-500">
+                            {tx.bankAccount?.bankName}
+                          </p>
+                        </div>
 
-                    {/* 금액 */}
-                    <span
-                      className={cn(
-                        'font-semibold tabular-nums text-sm',
-                        tx.transactionType === 'deposit' ? 'text-green-600' : 'text-stone-900'
-                      )}
-                    >
-                      {tx.transactionType === 'deposit' ? '+' : '-'}
-                      {new Intl.NumberFormat('ko-KR').format(tx.amount)}원
-                    </span>
-                  </div>
-                ))}
+                        {/* 금액 */}
+                        <span
+                          className={cn(
+                            'font-semibold tabular-nums text-sm',
+                            tx.transactionType === 'deposit' ? 'text-green-600' : 'text-stone-900'
+                          )}
+                        >
+                          {tx.transactionType === 'deposit' ? '+' : '-'}
+                          {new Intl.NumberFormat('ko-KR').format(tx.amount)}원
+                        </span>
+                      </div>
+                    </AnimatedItem>
+                  ))}
+                </AnimatedList>
               </Card>
             )}
-          </section>
+          </AnimatedSection>
         </div>
       </Page>
     </AppShell>

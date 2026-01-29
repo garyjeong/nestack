@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation } from '@tanstack/react-query'
 import { ArrowLeft, Camera } from 'lucide-react'
-import { AppShell, Page } from '@/shared/components/layout'
+import { AppShell, Page, AnimatedSection } from '@/shared/components/layout'
 import { Card } from '@/shared/components/ui/Card'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
@@ -76,7 +76,7 @@ export default function ProfileEditPage() {
       <Page>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Profile Image */}
-          <div className="flex justify-center">
+          <AnimatedSection delay={0} className="flex justify-center">
             <div className="relative">
               <Avatar
                 src={user?.profileImage}
@@ -91,10 +91,11 @@ export default function ProfileEditPage() {
                 <Camera className="h-4 w-4" />
               </button>
             </div>
-          </div>
+          </AnimatedSection>
 
           {/* Form Fields */}
-          <Card className="p-6">
+          <AnimatedSection delay={0.1}>
+            <Card className="p-6">
             <div className="space-y-4">
               <div>
                 <label htmlFor="name" className="mb-2 block text-sm font-medium text-stone-700">
@@ -123,18 +124,21 @@ export default function ProfileEditPage() {
                 <p className="mt-1 text-xs text-stone-500">이메일은 변경할 수 없습니다</p>
               </div>
             </div>
-          </Card>
+            </Card>
+          </AnimatedSection>
 
           {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full"
-            size="lg"
-            isLoading={updateProfileMutation.isPending}
-            disabled={!isDirty || updateProfileMutation.isPending}
-          >
-            저장하기
-          </Button>
+          <AnimatedSection delay={0.2}>
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              isLoading={updateProfileMutation.isPending}
+              disabled={!isDirty || updateProfileMutation.isPending}
+            >
+              저장하기
+            </Button>
+          </AnimatedSection>
         </form>
       </Page>
     </AppShell>

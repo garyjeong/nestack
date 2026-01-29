@@ -3,17 +3,17 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/shared/utils/cn'
 
 const cardVariants = cva(
-  // Base styles - Toss style
-  'rounded-2xl bg-white transition-all duration-200',
+  // Base styles - Toss style with dark mode
+  'rounded-2xl bg-white dark:bg-stone-800 transition-all duration-200',
   {
     variants: {
       variant: {
-        default: 'shadow-sm',
-        elevated: 'shadow-md',
-        outlined: 'border border-stone-200 shadow-none',
+        default: 'shadow-sm dark:shadow-stone-900/50',
+        elevated: 'shadow-md dark:shadow-stone-900/50',
+        outlined: 'border border-stone-200 dark:border-stone-700 shadow-none',
         ghost: 'bg-transparent shadow-none',
         gradient: 'gradient-primary text-white shadow-lg',
-        soft: 'bg-stone-50 shadow-none',
+        soft: 'bg-stone-50 dark:bg-stone-900 shadow-none',
       },
       interactive: {
         true: 'cursor-pointer card-hover active:scale-[0.99]',
@@ -65,7 +65,7 @@ const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingEleme
     <h3
       ref={ref}
       className={cn(
-        'text-lg font-bold leading-tight tracking-tight text-stone-900',
+        'text-lg font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-100',
         className
       )}
       {...props}
@@ -78,7 +78,7 @@ const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLPara
   ({ className, ...props }, ref) => (
     <p
       ref={ref}
-      className={cn('text-sm text-stone-500', className)}
+      className={cn('text-sm text-stone-500 dark:text-stone-400', className)}
       {...props}
     />
   )

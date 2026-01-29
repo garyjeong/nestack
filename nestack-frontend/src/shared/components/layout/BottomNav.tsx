@@ -29,43 +29,47 @@ export function BottomNav() {
     <nav
       className="fixed bottom-0 left-1/2 z-40 w-full max-w-[480px] -translate-x-1/2 px-4"
       style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+      aria-label="메인 네비게이션"
     >
       {/* 플로팅 네비게이션 바 */}
-      <div className="rounded-2xl bg-white/95 backdrop-blur-md shadow-lg border border-stone-100">
-        <div className="flex">
+      <div className="rounded-2xl bg-white/95 dark:bg-stone-800/95 backdrop-blur-md shadow-lg dark:shadow-stone-950/50 border border-stone-100 dark:border-stone-700">
+        <ul className="flex" role="menubar">
           {navItems.map((item) => {
             const active = isActive(item.path)
             const Icon = item.icon
 
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex flex-1 flex-col items-center justify-center min-h-[56px] py-2 transition-all duration-200',
-                  'active:scale-95',
-                  active
-                    ? 'text-primary-600'
-                    : 'text-stone-400 hover:text-stone-600'
-                )}
-              >
-                <div className={cn(
-                  'flex items-center justify-center rounded-xl transition-all duration-200',
-                  active ? 'bg-primary-50' : 'bg-transparent',
-                  'p-1.5'
-                )}>
-                  <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
-                </div>
-                <span className={cn(
-                  'mt-0.5 text-[10px] transition-all',
-                  active ? 'font-semibold text-primary-600' : 'font-medium'
-                )}>
-                  {item.label}
-                </span>
-              </Link>
+              <li key={item.path} role="none" className="flex-1">
+                <Link
+                  to={item.path}
+                  role="menuitem"
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'flex flex-col items-center justify-center min-h-[56px] py-2 transition-all duration-200',
+                    'active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500',
+                    active
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300'
+                  )}
+                >
+                  <div className={cn(
+                    'flex items-center justify-center rounded-xl transition-all duration-200',
+                    active ? 'bg-primary-50 dark:bg-primary-950' : 'bg-transparent',
+                    'p-1.5'
+                  )}>
+                    <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} aria-hidden="true" />
+                  </div>
+                  <span className={cn(
+                    'mt-0.5 text-[10px] transition-all',
+                    active ? 'font-semibold text-primary-600 dark:text-primary-400' : 'font-medium'
+                  )}>
+                    {item.label}
+                  </span>
+                </Link>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </div>
     </nav>
   )

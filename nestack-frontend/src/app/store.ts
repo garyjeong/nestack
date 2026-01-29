@@ -25,17 +25,49 @@ interface AuthActions {
   logout: () => void
 }
 
+type Theme = 'light' | 'dark' | 'system'
+
 interface UIState {
   sidebarOpen: boolean
   isSSEConnected: boolean
+  theme: Theme
 }
 
 interface UIActions {
   toggleSidebar: () => void
   setSSEConnected: (connected: boolean) => void
+  setTheme: (theme: Theme) => void
+  toggleTheme: () => void
 }
 
 type AppState = AuthState & AuthActions & UIState & UIActions
+
+// Helper function to apply theme to document
+function applyTheme(theme: Theme) {
+  const root = document.documentElement
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+  if (isDark) {
+    root.classList.add('dark')
+  } else {
+    root.classList.remove('dark')
+  }
+}
+
+// Initialize theme on app load
+function initializeTheme(theme: Theme) {
+  applyTheme(theme)
+
+  // Listen for system theme changes
+  if (theme === 'system') {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = () => applyTheme('system')
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }
+}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -76,12 +108,26 @@ export const useAppStore = create<AppState>()(
       // UI State
       sidebarOpen: false,
       isSSEConnected: false,
+      theme: 'system' as Theme,
 
       // UI Actions
       toggleSidebar: () =>
         set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
       setSSEConnected: (connected) => set({ isSSEConnected: connected }),
+
+      setTheme: (theme) => {
+        // Apply theme to document
+        applyTheme(theme)
+        set({ theme })
+      },
+
+      toggleTheme: () =>
+        set((state) => {
+          const newTheme = state.theme === 'light' ? 'dark' : state.theme === 'dark' ? 'system' : 'light'
+          applyTheme(newTheme)
+          return { theme: newTheme }
+        }),
     }),
     {
       name: 'nestack-auth',
@@ -90,7 +136,14 @@ export const useAppStore = create<AppState>()(
         refreshToken: state.refreshToken,
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        theme: state.theme,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Initialize theme after rehydration
+        if (state?.theme) {
+          initializeTheme(state.theme)
+        }
+      },
     }
   )
 )
@@ -100,3 +153,7 @@ export const selectUser = (state: AppState) => state.user
 export const selectIsAuthenticated = (state: AppState) => state.isAuthenticated
 export const selectIsLoading = (state: AppState) => state.isLoading
 export const selectAccessToken = (state: AppState) => state.accessToken
+export const selectTheme = (state: AppState) => state.theme
+
+// Export types
+export type { Theme }

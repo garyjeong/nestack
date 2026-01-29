@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from 'react-router-dom'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
+import { PasswordStrength, PasswordMatch } from '@/shared/components/ui/PasswordStrength'
 import { useSignup } from '@/features/auth/hooks'
 import { signupSchema, type SignupFormData } from '@/features/auth/schemas'
 
@@ -15,6 +16,7 @@ export default function SignupPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -25,6 +27,10 @@ export default function SignupPage() {
       confirmPassword: '',
     },
   })
+
+  // 실시간 비밀번호 검증을 위한 watch
+  const password = watch('password')
+  const confirmPassword = watch('confirmPassword')
 
   const onSubmit = (data: SignupFormData) => {
     if (!termsAccepted || !privacyAccepted) {
@@ -68,21 +74,30 @@ export default function SignupPage() {
               {...register('email')}
             />
 
-            <Input
-              label="비밀번호"
-              type="password"
-              placeholder="8자 이상, 영문/숫자/특수문자"
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <div className="space-y-2">
+              <Input
+                label="비밀번호"
+                type="password"
+                placeholder="8자 이상, 영문/숫자/특수문자"
+                error={errors.password?.message}
+                {...register('password')}
+              />
+              <PasswordStrength password={password || ''} />
+            </div>
 
-            <Input
-              label="비밀번호 확인"
-              type="password"
-              placeholder="비밀번호 재입력"
-              error={errors.confirmPassword?.message}
-              {...register('confirmPassword')}
-            />
+            <div className="space-y-2">
+              <Input
+                label="비밀번호 확인"
+                type="password"
+                placeholder="비밀번호 재입력"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword')}
+              />
+              <PasswordMatch
+                password={password || ''}
+                confirmPassword={confirmPassword || ''}
+              />
+            </div>
 
             <div className="space-y-2">
               <label className="flex items-start">

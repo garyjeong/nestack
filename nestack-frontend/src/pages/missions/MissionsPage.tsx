@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Flame, Target, Home, Heart, Plane, Sparkles } from 'lucide-react'
-import { AppShell, Page } from '@/shared/components/layout'
+import { AppShell, Page, AnimatedSection, AnimatedList, AnimatedItem } from '@/shared/components/layout'
 import { Card } from '@/shared/components/ui/Card'
 import { Chip } from '@/shared/components/ui/Chip'
 import { ProgressBar } from '@/shared/components/ui/ProgressBar'
 import { CurrencyDisplay, PercentDisplay } from '@/shared/components/ui/CountUpNumber'
 import { GradientCircularProgress } from '@/shared/components/ui/CircularProgress'
+import { NoMissionsEmpty } from '@/shared/components/feedback'
 import { useMissions, useMissionSummary } from '@/features/mission/hooks'
 import type { MissionStatus, MissionFilters } from '@/features/mission/types'
 import { cn } from '@/shared/utils/cn'
@@ -36,6 +37,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
 }
 
 export default function MissionsPage() {
+  const navigate = useNavigate()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedStatus, setSelectedStatus] = useState<MissionStatus | 'all'>('all')
 
@@ -61,7 +63,7 @@ export default function MissionsPage() {
 
       <Page className="pb-24">
         {/* 게이미피케이션 배너 */}
-        <section className="mb-6">
+        <AnimatedSection className="mb-6" delay={0}>
           <Card className="gradient-primary p-5 text-white relative overflow-hidden">
             {/* 배경 데코 */}
             <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
@@ -92,11 +94,11 @@ export default function MissionsPage() {
               </div>
             </div>
           </Card>
-        </section>
+        </AnimatedSection>
 
         {/* 요약 통계 */}
         {summary && (
-          <section className="mb-6">
+          <AnimatedSection className="mb-6" delay={0.1}>
             <div className="grid grid-cols-3 gap-3">
               <Card className="p-4 text-center">
                 <p className="text-2xl font-bold text-primary-600">
@@ -117,11 +119,11 @@ export default function MissionsPage() {
                 <p className="text-xs text-stone-500 mt-1">총 저축</p>
               </Card>
             </div>
-          </section>
+          </AnimatedSection>
         )}
 
         {/* 카테고리 필터 - Chip 스타일 */}
-        <section className="mb-4">
+        <AnimatedSection className="mb-4" delay={0.15}>
           <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-2">
             {categoryOptions.map((option) => (
               <Chip
@@ -135,10 +137,10 @@ export default function MissionsPage() {
               </Chip>
             ))}
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* 상태 필터 */}
-        <section className="mb-6">
+        <AnimatedSection className="mb-6" delay={0.2}>
           <div className="flex gap-2">
             {statusOptions.map((option) => (
               <button
@@ -155,10 +157,10 @@ export default function MissionsPage() {
               </button>
             ))}
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* 미션 목록 */}
-        <section>
+        <AnimatedSection delay={0.25}>
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
@@ -175,32 +177,17 @@ export default function MissionsPage() {
               ))}
             </div>
           ) : missions.length === 0 ? (
-            <Card className="p-8 text-center">
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-stone-100">
-                <Target className="h-10 w-10 text-stone-400" />
-              </div>
-              <p className="text-lg font-semibold text-stone-900 mb-1">
-                아직 미션이 없어요
-              </p>
-              <p className="text-stone-500 text-sm mb-4">
-                새로운 미션을 만들어 목표를 향해 나아가세요
-              </p>
-              <Link to="/missions/create">
-                <button className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors active:scale-[0.98]">
-                  <Plus className="h-4 w-4" />
-                  새 미션 만들기
-                </button>
-              </Link>
-            </Card>
+            <NoMissionsEmpty onAction={() => navigate('/missions/create')} />
           ) : (
-            <div className="space-y-4">
+            <AnimatedList className="space-y-4">
               {missions.map((mission) => {
                 const icon = categoryIcons[mission.category?.id ?? 'default'] || categoryIcons.default
                 const isCompleted = mission.status === 'completed'
 
                 return (
-                  <Link key={mission.id} to={`/missions/${mission.id}`}>
-                    <Card interactive className="p-5">
+                  <AnimatedItem key={mission.id}>
+                    <Link to={`/missions/${mission.id}`}>
+                      <Card interactive className="p-5">
                       <div className="flex gap-4">
                         {/* 원형 진행률 */}
                         <GradientCircularProgress
@@ -263,13 +250,14 @@ export default function MissionsPage() {
                           <span className="text-xs text-stone-500">파트너와 함께</span>
                         </div>
                       )}
-                    </Card>
-                  </Link>
+                      </Card>
+                    </Link>
+                  </AnimatedItem>
                 )
               })}
-            </div>
+            </AnimatedList>
           )}
-        </section>
+        </AnimatedSection>
       </Page>
 
       {/* FAB - 앱 컨테이너 내 고정 */}

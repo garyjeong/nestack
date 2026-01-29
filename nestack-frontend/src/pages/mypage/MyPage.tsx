@@ -10,7 +10,7 @@ import {
   Heart,
   Calendar,
 } from 'lucide-react'
-import { AppShell, Page } from '@/shared/components/layout'
+import { AppShell, Page, AnimatedSection } from '@/shared/components/layout'
 import { Card } from '@/shared/components/ui/Card'
 import { Avatar } from '@/shared/components/ui/Avatar'
 import { useAppStore } from '@/app/store'
@@ -44,7 +44,7 @@ export default function MyPage() {
 
       <Page className="pb-24">
         {/* 프로필 섹션 - 중앙 정렬 */}
-        <section className="mb-6">
+        <AnimatedSection delay={0} className="mb-6">
           <Card className="p-6 text-center">
             <div className="flex flex-col items-center">
               {/* 큰 아바타 */}
@@ -79,11 +79,11 @@ export default function MyPage() {
               </Link>
             </div>
           </Card>
-        </section>
+        </AnimatedSection>
 
         {/* 파트너 카드 */}
         {user?.familyGroupId && (
-          <section className="mb-6">
+          <AnimatedSection delay={0.1} className="mb-6">
             <Card className="p-5 bg-gradient-to-r from-accent-50 to-primary-50 border border-accent-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -117,11 +117,11 @@ export default function MyPage() {
                 </Link>
               </div>
             </Card>
-          </section>
+          </AnimatedSection>
         )}
 
         {/* 뱃지 섹션 */}
-        <section className="mb-6">
+        <AnimatedSection delay={0.2} className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-stone-900">뱃지</h3>
             <Link
@@ -161,10 +161,10 @@ export default function MyPage() {
               <span className="text-xs text-stone-400 font-medium">더보기</span>
             </Link>
           </div>
-        </section>
+        </AnimatedSection>
 
         {/* 설정 메뉴 */}
-        <section className="mb-6">
+        <AnimatedSection delay={0.3} className="mb-6">
           <h3 className="text-lg font-bold text-stone-900 mb-4">설정</h3>
           <Card className="overflow-hidden">
             <MenuItem
@@ -186,10 +186,10 @@ export default function MyPage() {
               description="푸시 알림 관리"
             />
           </Card>
-        </section>
+        </AnimatedSection>
 
         {/* 지원 메뉴 */}
-        <section className="mb-6">
+        <AnimatedSection delay={0.4} className="mb-6">
           <h3 className="text-lg font-bold text-stone-900 mb-4">지원</h3>
           <Card className="overflow-hidden">
             <MenuItem
@@ -205,10 +205,10 @@ export default function MyPage() {
               description="v1.0.0"
             />
           </Card>
-        </section>
+        </AnimatedSection>
 
         {/* 로그아웃 버튼 */}
-        <section>
+        <AnimatedSection delay={0.5}>
           <button
             onClick={handleLogout}
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-white py-4 text-red-500 font-medium transition-colors hover:bg-red-50 active:scale-[0.99]"
@@ -216,7 +216,7 @@ export default function MyPage() {
             <LogOut className="h-5 w-5" />
             <span>로그아웃</span>
           </button>
-        </section>
+        </AnimatedSection>
       </Page>
     </AppShell>
   )

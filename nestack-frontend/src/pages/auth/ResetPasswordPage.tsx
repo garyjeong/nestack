@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { Lock, AlertCircle, ArrowLeft } from 'lucide-react'
 import { Input } from '@/shared/components/ui/Input'
 import { Button } from '@/shared/components/ui/Button'
+import { PasswordStrength, PasswordMatch } from '@/shared/components/ui/PasswordStrength'
 import { useResetPassword } from '@/features/auth/hooks'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/features/auth/schemas'
 
@@ -17,6 +18,7 @@ export default function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
@@ -25,6 +27,10 @@ export default function ResetPasswordPage() {
       confirmPassword: '',
     },
   })
+
+  // 실시간 비밀번호 검증을 위한 watch
+  const password = watch('password')
+  const confirmPassword = watch('confirmPassword')
 
   useEffect(() => {
     if (!token) {
@@ -78,21 +84,30 @@ export default function ResetPasswordPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
-              label="새 비밀번호"
-              type="password"
-              placeholder="8자 이상, 영문/숫자/특수문자"
-              error={errors.password?.message}
-              {...register('password')}
-            />
+            <div className="space-y-2">
+              <Input
+                label="새 비밀번호"
+                type="password"
+                placeholder="8자 이상, 영문/숫자/특수문자"
+                error={errors.password?.message}
+                {...register('password')}
+              />
+              <PasswordStrength password={password || ''} />
+            </div>
 
-            <Input
-              label="비밀번호 확인"
-              type="password"
-              placeholder="비밀번호 재입력"
-              error={errors.confirmPassword?.message}
-              {...register('confirmPassword')}
-            />
+            <div className="space-y-2">
+              <Input
+                label="비밀번호 확인"
+                type="password"
+                placeholder="비밀번호 재입력"
+                error={errors.confirmPassword?.message}
+                {...register('confirmPassword')}
+              />
+              <PasswordMatch
+                password={password || ''}
+                confirmPassword={confirmPassword || ''}
+              />
+            </div>
 
             <Button
               type="submit"

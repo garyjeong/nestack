@@ -30,7 +30,6 @@ export function PullToRefresh({
   const isPulling = useRef(false)
 
   const y = useMotionValue(0)
-  const progress = useTransform(y, [0, threshold], [0, 1])
   const rotation = useTransform(y, [0, threshold], [0, 180])
   const opacity = useTransform(y, [0, threshold * 0.5, threshold], [0, 0.5, 1])
   const scale = useTransform(y, [0, threshold], [0.8, 1])
