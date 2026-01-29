@@ -19,3 +19,7 @@ node_modules/
 dist/
 build/
 *.log
+
+# Local tool configurations
+.playwright-mcp/
+.serena/
