@@ -36,7 +36,7 @@ export class User {
   @Column({
     type: 'enum',
     enum: AuthProvider,
-    default: AuthProvider.LOCAL,
+    default: AuthProvider.GOOGLE,
   })
   provider: AuthProvider;
 

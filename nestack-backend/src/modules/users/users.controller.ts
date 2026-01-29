@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { UpdateUserDto, ChangePasswordDto, UserResponseDto } from './dto';
+import { UpdateUserDto, UserResponseDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../database/entities';
 
@@ -43,18 +43,5 @@ export class UsersController {
   async deleteMe(@CurrentUser() user: User): Promise<{ message: string }> {
     await this.usersService.deleteMe(user.id);
     return { message: 'Account deleted successfully' };
-  }
-
-  @Patch('me/password')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Change password' })
-  @ApiResponse({ status: 200, description: 'Password changed' })
-  @ApiResponse({ status: 401, description: 'Invalid current password' })
-  async changePassword(
-    @CurrentUser() user: User,
-    @Body() dto: ChangePasswordDto,
-  ): Promise<{ message: string }> {
-    await this.usersService.changePassword(user.id, dto);
-    return { message: 'Password changed successfully' };
   }
 }

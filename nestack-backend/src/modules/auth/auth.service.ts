@@ -2,120 +2,44 @@ import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository } from 'typeorm';
+import { OAuth2Client } from 'google-auth-library';
+import { User, RefreshToken } from '../../database/entities';
+import { AuthProvider, UserStatus } from '../../common/enums';
 import {
-  User,
-  RefreshToken,
-  EmailVerificationToken,
-} from '../../database/entities';
-import { AuthProvider, UserStatus, TokenType } from '../../common/enums';
-import {
-  hashPassword,
-  comparePassword,
-  generateRandomToken,
-} from '../../common/utils/crypto.util';
-import {
-  UserAlreadyExistsException,
   InvalidCredentialsException,
   InvalidTokenException,
   UserNotFoundException,
-  EmailNotVerifiedException,
 } from '../../common/exceptions/business.exception';
-import {
-  SignupDto,
-  LoginDto,
-  TokenResponseDto,
-  AuthResponseDto,
-  GoogleLoginDto,
-} from './dto';
-import { MailService } from '../mail/mail.service';
+import { TokenResponseDto, AuthResponseDto, GoogleLoginDto } from './dto';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private googleClient: OAuth2Client;
 
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
-    @InjectRepository(EmailVerificationToken)
-    private emailTokenRepository: Repository<EmailVerificationToken>,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private mailService: MailService,
-  ) {}
-
-  async signup(dto: SignupDto): Promise<AuthResponseDto> {
-    // Check if user exists
-    const existingUser = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
-
-    if (existingUser) {
-      throw new UserAlreadyExistsException();
-    }
-
-    // Create user
-    const passwordHash = await hashPassword(dto.password);
-    const user = this.userRepository.create({
-      email: dto.email,
-      passwordHash,
-      name: dto.name,
-      provider: AuthProvider.LOCAL,
-      status: UserStatus.ACTIVE,
-    });
-
-    await this.userRepository.save(user);
-
-    // Create email verification token
-    await this.createEmailVerificationToken(user.id);
-
-    // Generate tokens
-    const tokens = await this.generateTokens(user);
-
-    return {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      tokens,
-    };
-  }
-
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
-
-    if (!user || !user.passwordHash) {
-      throw new InvalidCredentialsException();
-    }
-
-    const isPasswordValid = await comparePassword(dto.password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new InvalidCredentialsException();
-    }
-
-    // Update last login
-    user.lastLoginAt = new Date();
-    await this.userRepository.save(user);
-
-    // Generate tokens
-    const tokens = await this.generateTokens(user);
-
-    return {
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      tokens,
-    };
+  ) {
+    this.googleClient = new OAuth2Client(
+      this.configService.get('google.clientId'),
+    );
   }
 
   async googleLogin(dto: GoogleLoginDto): Promise<AuthResponseDto> {
-    // Verify Google ID token (simplified - in production use Google API)
-    // For now, we'll decode the token and extract user info
     try {
-      const payload = this.jwtService.decode(dto.idToken) as any;
+      // Verify Google ID token using google-auth-library
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: dto.idToken,
+        audience: this.configService.get('google.clientId'),
+      });
+
+      const payload = ticket.getPayload();
 
       if (!payload || !payload.email) {
         throw new InvalidCredentialsException();
@@ -138,6 +62,7 @@ export class AuthService {
           status: UserStatus.ACTIVE,
         });
         await this.userRepository.save(user);
+        this.logger.log(`New user created via Google OAuth: ${user.email}`);
       } else if (user.provider !== AuthProvider.GOOGLE) {
         // Link Google account to existing user
         user.provider = AuthProvider.GOOGLE;
@@ -146,7 +71,11 @@ export class AuthService {
           user.emailVerified = true;
           user.emailVerifiedAt = new Date();
         }
+        if (payload.picture && !user.profileImageUrl) {
+          user.profileImageUrl = payload.picture;
+        }
         await this.userRepository.save(user);
+        this.logger.log(`Existing user linked to Google OAuth: ${user.email}`);
       }
 
       // Update last login
@@ -215,131 +144,6 @@ export class AuthService {
     }
   }
 
-  async verifyEmail(token: string): Promise<void> {
-    const emailToken = await this.emailTokenRepository.findOne({
-      where: {
-        token,
-        type: TokenType.EMAIL_VERIFY,
-        usedAt: null as any,
-        expiresAt: MoreThan(new Date()),
-      },
-    });
-
-    if (!emailToken) {
-      throw new InvalidTokenException();
-    }
-
-    const user = await this.userRepository.findOne({
-      where: { id: emailToken.userId },
-    });
-
-    if (!user) {
-      throw new UserNotFoundException();
-    }
-
-    // Update user
-    user.emailVerified = true;
-    user.emailVerifiedAt = new Date();
-    await this.userRepository.save(user);
-
-    // Mark token as used
-    emailToken.usedAt = new Date();
-    await this.emailTokenRepository.save(emailToken);
-  }
-
-  async resendVerificationEmail(email: string): Promise<void> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-    });
-
-    if (!user) {
-      // Don't reveal if user exists
-      return;
-    }
-
-    if (user.emailVerified) {
-      return;
-    }
-
-    // Delete old tokens
-    await this.emailTokenRepository.delete({
-      userId: user.id,
-      type: TokenType.EMAIL_VERIFY,
-    });
-
-    // Create new token and send email
-    await this.createEmailVerificationToken(user.id);
-  }
-
-  async forgotPassword(email: string): Promise<void> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-    });
-
-    if (!user) {
-      // Don't reveal if user exists
-      return;
-    }
-
-    // Delete old tokens
-    await this.emailTokenRepository.delete({
-      userId: user.id,
-      type: TokenType.PASSWORD_RESET,
-    });
-
-    // Create password reset token
-    const token = generateRandomToken();
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour expiry
-
-    const resetToken = this.emailTokenRepository.create({
-      userId: user.id,
-      token,
-      type: TokenType.PASSWORD_RESET,
-      expiresAt,
-    });
-
-    await this.emailTokenRepository.save(resetToken);
-
-    // Send password reset email
-    await this.mailService.sendPasswordResetEmail(user.email, user.name, token);
-    this.logger.log(`Password reset token created for user ${user.id}`);
-  }
-
-  async resetPassword(token: string, newPassword: string): Promise<void> {
-    const resetToken = await this.emailTokenRepository.findOne({
-      where: {
-        token,
-        type: TokenType.PASSWORD_RESET,
-        usedAt: null as any,
-        expiresAt: MoreThan(new Date()),
-      },
-    });
-
-    if (!resetToken) {
-      throw new InvalidTokenException();
-    }
-
-    const user = await this.userRepository.findOne({
-      where: { id: resetToken.userId },
-    });
-
-    if (!user) {
-      throw new UserNotFoundException();
-    }
-
-    // Update password
-    user.passwordHash = await hashPassword(newPassword);
-    await this.userRepository.save(user);
-
-    // Mark token as used
-    resetToken.usedAt = new Date();
-    await this.emailTokenRepository.save(resetToken);
-
-    // Delete all refresh tokens (logout from all devices)
-    await this.refreshTokenRepository.delete({ userId: user.id });
-  }
-
   private async generateTokens(user: User): Promise<TokenResponseDto> {
     const accessTokenExpiry = this.configService.get('jwt.accessTokenExpiresIn');
     const refreshTokenExpiry = this.configService.get('jwt.refreshTokenExpiresIn');
@@ -375,27 +179,5 @@ export class AuthService {
       tokenType: 'Bearer',
       expiresIn: 900, // 15 minutes in seconds
     };
-  }
-
-  private async createEmailVerificationToken(userId: string): Promise<void> {
-    const token = generateRandomToken();
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiry
-
-    const emailToken = this.emailTokenRepository.create({
-      userId,
-      token,
-      type: TokenType.EMAIL_VERIFY,
-      expiresAt,
-    });
-
-    await this.emailTokenRepository.save(emailToken);
-
-    // Send verification email
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (user) {
-      await this.mailService.sendVerificationEmail(user.email, user.name, token);
-    }
-    this.logger.log(`Email verification token created for user ${userId}`);
   }
 }
