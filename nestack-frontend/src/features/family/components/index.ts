@@ -1,1 +1,0 @@
-export { FamilyInfo } from './FamilyInfo'
