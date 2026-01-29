@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from './endpoints'
 // ---------------------------------------------------------------------------
 
 const API_BASE_URL = __DEV__
-  ? 'http://10.0.2.2:7100/api' // Android emulator -> host localhost
+  ? 'http://10.0.2.2:7002/api' // Android emulator -> host localhost
   : 'https://api.nestack.kr/api'
 
 // ---------------------------------------------------------------------------

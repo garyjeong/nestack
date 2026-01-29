@@ -1,28 +1,20 @@
 import { createTokens } from 'tamagui'
-import { colors } from './colors'
+import { colors, themePalettes, DEFAULT_THEME } from './colors'
+
+// 기본 테마의 색상을 사용
+const defaultPalette = themePalettes[DEFAULT_THEME]
 
 export const tokens = createTokens({
   color: {
-    // Primary - Emerald
-    primary50: colors.primary[50],
-    primary100: colors.primary[100],
-    primary200: colors.primary[200],
-    primary300: colors.primary[300],
-    primary400: colors.primary[400],
-    primary500: colors.primary[500],
-    primary600: colors.primary[600],
-    primary700: colors.primary[700],
-    primary800: colors.primary[800],
-    primary900: colors.primary[900],
+    // Primary (from default theme)
+    primary: defaultPalette.primary,
+    primaryLight: defaultPalette.primaryLight,
+    primaryDark: defaultPalette.primaryDark,
 
-    // Accent - Rose
-    accent50: colors.accent[50],
-    accent100: colors.accent[100],
-    accent200: colors.accent[200],
-    accent300: colors.accent[300],
-    accent400: colors.accent[400],
-    accent500: colors.accent[500],
-    accent600: colors.accent[600],
+    // Secondary
+    secondary: defaultPalette.secondary,
+    secondaryLight: defaultPalette.secondaryLight,
+    secondaryDark: defaultPalette.secondaryDark,
 
     // Neutral - Stone
     stone50: colors.stone[50],
@@ -36,19 +28,41 @@ export const tokens = createTokens({
     stone800: colors.stone[800],
     stone900: colors.stone[900],
 
+    // Dark mode
+    darkBackground: colors.dark.background,
+    darkCard: colors.dark.card,
+    darkElevated: colors.dark.elevated,
+    darkBorder: colors.dark.border,
+
     // Semantic
-    success: colors.success,
-    warning: colors.warning,
-    error: colors.error,
-    info: colors.info,
+    success: colors.success.light,
+    successDark: colors.success.dark,
+    successBg: colors.success.bg,
+    successBgDark: colors.success.bgDark,
+
+    warning: colors.warning.light,
+    warningDark: colors.warning.dark,
+    warningBg: colors.warning.bg,
+    warningBgDark: colors.warning.bgDark,
+
+    error: colors.error.light,
+    errorDark: colors.error.dark,
+    errorBg: colors.error.bg,
+    errorBgDark: colors.error.bgDark,
+
+    info: colors.info.light,
+    infoDark: colors.info.dark,
+    infoBg: colors.info.bg,
+    infoBgDark: colors.info.bgDark,
+
     white: colors.white,
     black: colors.black,
     transparent: colors.transparent,
 
     // Semantic aliases (light mode defaults)
-    background: colors.stone[50],
+    background: colors.white,
     backgroundCard: colors.white,
-    backgroundSecondary: colors.stone[100],
+    backgroundSecondary: colors.stone[50],
     text: colors.stone[900],
     textSecondary: colors.stone[500],
     textTertiary: colors.stone[400],

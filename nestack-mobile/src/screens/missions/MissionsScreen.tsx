@@ -2,23 +2,44 @@ import React, { useState, useCallback } from 'react'
 import { FlatList, Pressable, RefreshControl } from 'react-native'
 import { Stack, Text } from 'tamagui'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
+import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated'
 import { Screen } from '../../shared/components/layout/Screen'
+import { Card } from '../../shared/components/ui/Card'
+import { CompactProgressBar } from '../../shared/components/ui/ProgressBar'
+import { FAB } from '../../shared/components/ui/Button'
+import { useTheme } from '../../shared/hooks/useTheme'
 import { useMissions, useLifeCycleCategories } from '../../features/mission/hooks'
 import { formatCompactCurrency } from '../../shared/utils/format'
 import type { Mission, MissionStatus, LifeCycleCategory } from '../../features/mission/types'
 import type { MissionStackParamList } from '../../app/navigation/types'
-import { Target, Plus, Calendar, ChevronRight } from 'lucide-react-native'
+import { Target, Plus, Calendar, ChevronRight, Sparkles, CheckCircle, XCircle, Clock } from 'lucide-react-native'
 
 type Props = NativeStackScreenProps<MissionStackParamList, 'Missions'>
 
-const STATUS_TABS: { key: MissionStatus | 'all'; label: string }[] = [
+type StatusTabKey = MissionStatus | 'all'
+
+const STATUS_TABS: { key: StatusTabKey; label: string }[] = [
   { key: 'all', label: '전체' },
   { key: 'in_progress', label: '진행중' },
   { key: 'completed', label: '완료' },
   { key: 'failed', label: '실패' },
 ]
 
+const getStatusIcon = (key: StatusTabKey, color: string) => {
+  switch (key) {
+    case 'in_progress':
+      return <Sparkles size={14} color={color} />
+    case 'completed':
+      return <CheckCircle size={14} color={color} />
+    case 'failed':
+      return <XCircle size={14} color={color} />
+    default:
+      return null
+  }
+}
+
 export default function MissionsScreen({ navigation }: Props) {
+  const { colors, palette } = useTheme()
   const [selectedStatus, setSelectedStatus] = useState<MissionStatus | 'all'>('all')
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined)
 
@@ -40,17 +61,17 @@ export default function MissionsScreen({ navigation }: Props) {
   const getStatusColor = (status: MissionStatus) => {
     switch (status) {
       case 'in_progress':
-        return '#059669'
+        return colors.primary
       case 'completed':
-        return '#3b82f6'
+        return colors.success
       case 'failed':
-        return '#ef4444'
+        return colors.error
       case 'pending':
-        return '#f59e0b'
+        return colors.warning
       case 'cancelled':
-        return '#a8a29e'
+        return colors.textTertiary
       default:
-        return '#78716c'
+        return colors.textSecondary
     }
   }
 
@@ -71,199 +92,203 @@ export default function MissionsScreen({ navigation }: Props) {
     }
   }
 
-  const renderCategoryChip = (category: LifeCycleCategory) => {
+  const getCategoryIcon = (categoryName: string) => {
+    // Return different icons based on category name
+    return <Target size={22} color={colors.primary} />
+  }
+
+  const renderCategoryChip = (category: LifeCycleCategory, index: number) => {
     const isSelected = selectedCategoryId === category.id
     return (
-      <Pressable
-        key={category.id}
-        onPress={() =>
-          setSelectedCategoryId(isSelected ? undefined : category.id)
-        }
-      >
-        <Stack
-          paddingHorizontal={14}
-          paddingVertical={8}
-          borderRadius={20}
-          backgroundColor={isSelected ? '#059669' : '#ffffff'}
-          borderWidth={1}
-          borderColor={isSelected ? '#059669' : '#e7e5e4'}
-          marginRight={8}
+      <Animated.View key={category.id} entering={FadeInRight.delay(index * 50).duration(300)}>
+        <Pressable
+          onPress={() =>
+            setSelectedCategoryId(isSelected ? undefined : category.id)
+          }
         >
-          <Text
-            fontSize={13}
-            fontWeight="500"
-            color={isSelected ? '#ffffff' : '#57534e'}
+          <Stack
+            paddingHorizontal={16}
+            paddingVertical={10}
+            borderRadius={12}
+            backgroundColor={isSelected ? colors.primary : colors.card}
+            borderWidth={1}
+            borderColor={isSelected ? colors.primary : colors.border}
+            marginRight={8}
           >
-            {category.name}
-          </Text>
-        </Stack>
-      </Pressable>
+            <Text
+              fontSize={14}
+              fontWeight="600"
+              color={isSelected ? '#ffffff' : colors.text}
+            >
+              {category.name}
+            </Text>
+          </Stack>
+        </Pressable>
+      </Animated.View>
     )
   }
 
-  const renderMissionItem = ({ item }: { item: Mission }) => (
-    <Pressable onPress={() => navigation.navigate('MissionDetail', { id: item.id })}>
-      <Stack
-        backgroundColor="#ffffff"
-        borderRadius={16}
-        padding={16}
-        marginHorizontal={20}
-        marginBottom={12}
-        borderWidth={1}
-        borderColor="#f5f5f4"
-      >
-        <Stack flexDirection="row" alignItems="center" justifyContent="space-between">
-          <Stack flexDirection="row" alignItems="center" flex={1}>
-            <Stack
-              width={44}
-              height={44}
-              borderRadius={12}
-              backgroundColor="#ecfdf5"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Target size={22} color="#059669" />
-            </Stack>
-            <Stack flex={1} marginLeft={12}>
-              <Text fontSize={15} fontWeight="600" color="#1c1917" numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Stack flexDirection="row" alignItems="center" gap={6} marginTop={4}>
+  const renderMissionItem = ({ item, index }: { item: Mission; index: number }) => (
+    <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
+      <Pressable onPress={() => navigation.navigate('MissionDetail', { id: item.id })}>
+        <Card
+          variant="elevated"
+          style={{ marginHorizontal: 20, marginBottom: 12 }}
+        >
+          <Stack padding={18}>
+            <Stack flexDirection="row" alignItems="center" justifyContent="space-between">
+              <Stack flexDirection="row" alignItems="center" flex={1}>
                 <Stack
-                  paddingHorizontal={6}
-                  paddingVertical={2}
-                  borderRadius={4}
-                  backgroundColor={getStatusColor(item.status) + '15'}
+                  width={48}
+                  height={48}
+                  borderRadius={14}
+                  backgroundColor={`${colors.primary}15`}
+                  alignItems="center"
+                  justifyContent="center"
                 >
-                  <Text
-                    fontSize={11}
-                    fontWeight="600"
-                    color={getStatusColor(item.status)}
-                  >
-                    {getStatusLabel(item.status)}
-                  </Text>
+                  {getCategoryIcon(item.category?.name || '')}
                 </Stack>
-                <Stack flexDirection="row" alignItems="center" gap={2}>
-                  <Calendar size={11} color="#a8a29e" />
-                  <Text fontSize={11} color="#a8a29e">
-                    D-{item.daysRemaining}
+                <Stack flex={1} marginLeft={14}>
+                  <Text fontSize={16} fontWeight="600" color={colors.text} numberOfLines={1}>
+                    {item.name}
                   </Text>
+                  <Stack flexDirection="row" alignItems="center" gap={8} marginTop={6}>
+                    <Stack
+                      paddingHorizontal={8}
+                      paddingVertical={3}
+                      borderRadius={6}
+                      backgroundColor={getStatusColor(item.status) + '15'}
+                    >
+                      <Text
+                        fontSize={11}
+                        fontWeight="700"
+                        color={getStatusColor(item.status)}
+                      >
+                        {getStatusLabel(item.status)}
+                      </Text>
+                    </Stack>
+                    <Stack flexDirection="row" alignItems="center" gap={4}>
+                      <Clock size={12} color={colors.textTertiary} />
+                      <Text fontSize={12} fontWeight="500" color={colors.textTertiary}>
+                        D-{item.daysRemaining}
+                      </Text>
+                    </Stack>
+                  </Stack>
                 </Stack>
               </Stack>
+              <ChevronRight size={22} color={colors.border} />
+            </Stack>
+
+            {/* Progress */}
+            <Stack marginTop={16}>
+              <Stack flexDirection="row" justifyContent="space-between" marginBottom={8}>
+                <Text fontSize={13} color={colors.textSecondary}>
+                  {formatCompactCurrency(item.currentAmount)} /{' '}
+                  {formatCompactCurrency(item.targetAmount)}
+                </Text>
+                <Text fontSize={14} fontWeight="700" color={colors.primary}>
+                  {Math.round(item.progress)}%
+                </Text>
+              </Stack>
+              <CompactProgressBar progress={item.progress} height={8} />
             </Stack>
           </Stack>
-          <ChevronRight size={20} color="#d6d3d1" />
-        </Stack>
-
-        {/* Progress */}
-        <Stack marginTop={14}>
-          <Stack flexDirection="row" justifyContent="space-between" marginBottom={6}>
-            <Text fontSize={12} color="#78716c">
-              {formatCompactCurrency(item.currentAmount)} /{' '}
-              {formatCompactCurrency(item.targetAmount)}
-            </Text>
-            <Text fontSize={12} fontWeight="600" color="#059669">
-              {Math.round(item.progress)}%
-            </Text>
-          </Stack>
-          <Stack
-            height={6}
-            borderRadius={3}
-            backgroundColor="#f5f5f4"
-            overflow="hidden"
-          >
-            <Stack
-              height={6}
-              borderRadius={3}
-              backgroundColor="#059669"
-              width={`${Math.min(item.progress, 100)}%` as any}
-            />
-          </Stack>
-        </Stack>
-      </Stack>
-    </Pressable>
+        </Card>
+      </Pressable>
+    </Animated.View>
   )
 
   const renderEmpty = () => (
-    <Stack flex={1} alignItems="center" justifyContent="center" paddingTop={60}>
-      <Stack
-        width={64}
-        height={64}
-        borderRadius={32}
-        backgroundColor="#f5f5f4"
-        alignItems="center"
-        justifyContent="center"
-        marginBottom={16}
-      >
-        <Target size={28} color="#a8a29e" />
+    <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+      <Stack flex={1} alignItems="center" justifyContent="center" paddingTop={80}>
+        <Stack
+          width={80}
+          height={80}
+          borderRadius={24}
+          backgroundColor={`${colors.primary}10`}
+          alignItems="center"
+          justifyContent="center"
+          marginBottom={20}
+        >
+          <Target size={36} color={colors.primary} />
+        </Stack>
+        <Text fontSize={18} fontWeight="700" color={colors.text}>
+          미션이 없습니다
+        </Text>
+        <Text fontSize={14} color={colors.textSecondary} marginTop={8} textAlign="center">
+          새로운 미션을 만들어{'\n'}저축 목표를 시작하세요
+        </Text>
       </Stack>
-      <Text fontSize={16} fontWeight="600" color="#78716c">
-        미션이 없습니다
-      </Text>
-      <Text fontSize={13} color="#a8a29e" marginTop={4} textAlign="center">
-        새로운 미션을 만들어 저축 목표를 시작하세요
-      </Text>
-    </Stack>
+    </Animated.View>
   )
 
   return (
     <Screen edges={['top']}>
       {/* Header */}
-      <Stack
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="center"
-        paddingHorizontal={20}
-        paddingTop={16}
-        paddingBottom={8}
-      >
-        <Text fontSize={24} fontWeight="800" color="#1c1917">
-          미션
-        </Text>
-      </Stack>
+      <Animated.View entering={FadeInDown.duration(400)}>
+        <Stack
+          flexDirection="row"
+          justifyContent="space-between"
+          alignItems="center"
+          paddingHorizontal={20}
+          paddingTop={16}
+          paddingBottom={8}
+        >
+          <Text fontSize={26} fontWeight="800" color={colors.text}>
+            미션
+          </Text>
+        </Stack>
+      </Animated.View>
 
       {/* Category Chips */}
       {categories && categories.length > 0 && (
         <FlatList
           data={categories}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => renderCategoryChip(item)}
+          renderItem={({ item, index }) => renderCategoryChip(item, index)}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10 }}
           style={{ flexGrow: 0 }}
         />
       )}
 
       {/* Status Tabs */}
-      <Stack
-        flexDirection="row"
-        paddingHorizontal={20}
-        paddingVertical={8}
-        gap={4}
-      >
-        {STATUS_TABS.map((tab) => {
-          const isActive = selectedStatus === tab.key
-          return (
-            <Pressable key={tab.key} onPress={() => setSelectedStatus(tab.key)}>
-              <Stack
-                paddingHorizontal={16}
-                paddingVertical={8}
-                borderRadius={8}
-                backgroundColor={isActive ? '#059669' : 'transparent'}
-              >
-                <Text
-                  fontSize={14}
-                  fontWeight={isActive ? '600' : '400'}
-                  color={isActive ? '#ffffff' : '#78716c'}
+      <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+        <Stack
+          flexDirection="row"
+          paddingHorizontal={20}
+          paddingVertical={8}
+          gap={6}
+        >
+          {STATUS_TABS.map((tab) => {
+            const isActive = selectedStatus === tab.key
+            const iconColor = isActive ? '#ffffff' : colors.textSecondary
+            return (
+              <Pressable key={tab.key} onPress={() => setSelectedStatus(tab.key)}>
+                <Stack
+                  flexDirection="row"
+                  alignItems="center"
+                  gap={6}
+                  paddingHorizontal={16}
+                  paddingVertical={10}
+                  borderRadius={12}
+                  backgroundColor={isActive ? colors.primary : colors.backgroundSecondary}
                 >
-                  {tab.label}
-                </Text>
-              </Stack>
-            </Pressable>
-          )
-        })}
-      </Stack>
+                  {getStatusIcon(tab.key, iconColor)}
+                  <Text
+                    fontSize={14}
+                    fontWeight={isActive ? '700' : '500'}
+                    color={isActive ? '#ffffff' : colors.textSecondary}
+                  >
+                    {tab.label}
+                  </Text>
+                </Stack>
+              </Pressable>
+            )
+          })}
+        </Stack>
+      </Animated.View>
 
       {/* Mission List */}
       <FlatList
@@ -272,36 +297,28 @@ export default function MissionsScreen({ navigation }: Props) {
         renderItem={renderMissionItem}
         ListEmptyComponent={renderEmpty}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 8, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={onRefresh} tintColor="#059669" />
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
         }
       />
 
       {/* FAB */}
-      <Pressable
-        onPress={() => navigation.navigate('MissionCreate', {})}
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          right: 20,
-        }}
+      <Stack
+        position="absolute"
+        bottom={24}
+        right={20}
       >
-        <Stack
-          width={56}
-          height={56}
-          borderRadius={28}
-          backgroundColor="#059669"
-          alignItems="center"
-          justifyContent="center"
-          shadowColor="#000000"
-          shadowOffset={{ width: 0, height: 2 }}
-          shadowOpacity={0.15}
-          shadowRadius={8}
-        >
-          <Plus size={28} color="#ffffff" />
-        </Stack>
-      </Pressable>
+        <FAB
+          icon={<Plus size={28} color="#ffffff" />}
+          onPress={() => navigation.navigate('MissionCreate', {})}
+        />
+      </Stack>
     </Screen>
   )
 }

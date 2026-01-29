@@ -7,8 +7,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       Auth: {
         screens: {
-          VerifyEmail: 'verify-email',
-          ResetPassword: 'reset-password',
+          Login: 'login',
         },
       },
       Onboarding: {

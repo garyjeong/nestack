@@ -29,12 +29,19 @@ interface User {
   familyGroupId?: string | null
 }
 
+interface Partner {
+  id: string
+  name: string
+  profileImage?: string | null
+}
+
 type Theme = 'light' | 'dark' | 'system'
 
 interface AuthState {
   accessToken: string | null
   refreshToken: string | null
   user: User | null
+  partner: Partner | null
   isAuthenticated: boolean
   isLoading: boolean
 }
@@ -48,6 +55,7 @@ interface UIState {
 interface AuthActions {
   setTokens: (accessToken: string, refreshToken: string) => void
   setUser: (user: User | null) => void
+  setPartner: (partner: Partner | null) => void
   setLoading: (isLoading: boolean) => void
   logout: () => void
 }
@@ -70,6 +78,7 @@ export const useAuthStore = create<AuthStore>()(
       accessToken: null,
       refreshToken: null,
       user: null,
+      partner: null,
       isAuthenticated: false,
       isLoading: true,
 
@@ -93,6 +102,8 @@ export const useAuthStore = create<AuthStore>()(
           isLoading: false,
         }),
 
+      setPartner: (partner) => set({ partner }),
+
       setLoading: (isLoading) => set({ isLoading }),
 
       logout: () =>
@@ -100,6 +111,7 @@ export const useAuthStore = create<AuthStore>()(
           accessToken: null,
           refreshToken: null,
           user: null,
+          partner: null,
           isAuthenticated: false,
           isLoading: false,
         }),
@@ -129,6 +141,7 @@ export const useAuthStore = create<AuthStore>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         user: state.user,
+        partner: state.partner,
         isAuthenticated: state.isAuthenticated,
         theme: state.theme,
         biometricEnabled: state.biometricEnabled,
@@ -147,4 +160,4 @@ export const selectTheme = (state: AuthStore) => state.theme
 
 // --- Exported Types ---
 
-export type { User, Theme, AuthStore }
+export type { User, Partner, Theme, AuthStore }

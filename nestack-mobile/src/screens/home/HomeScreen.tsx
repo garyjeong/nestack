@@ -1,9 +1,14 @@
 import React, { useCallback } from 'react'
-import { FlatList, Pressable, RefreshControl } from 'react-native'
+import { FlatList, Pressable, RefreshControl, StyleSheet } from 'react-native'
 import { Stack, Text } from 'tamagui'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import Animated, { FadeIn, FadeInDown, FadeInRight } from 'react-native-reanimated'
+import LinearGradient from 'react-native-linear-gradient'
 import { Screen } from '../../shared/components/layout/Screen'
+import { Card } from '../../shared/components/ui/Card'
+import { CompactProgressBar } from '../../shared/components/ui/ProgressBar'
+import { useTheme } from '../../shared/hooks/useTheme'
 import { useAuthStore } from '../../store/authStore'
 import { useMissionSummary, useMissions } from '../../features/mission/hooks'
 import { useFinanceSummary, useTransactions } from '../../features/finance/hooks'
@@ -18,10 +23,14 @@ import {
   ChevronRight,
   ArrowUpRight,
   ArrowDownLeft,
+  Bell,
+  Users,
 } from 'lucide-react-native'
 
 export default function HomeScreen() {
+  const { colors, palette, isDark } = useTheme()
   const user = useAuthStore((state) => state.user)
+  const partner = useAuthStore((state) => state.partner)
   const navigation = useNavigation<NativeStackNavigationProp<MissionStackParamList>>()
 
   const {
@@ -61,70 +70,57 @@ export default function HomeScreen() {
   const activeMissions = activeMissionsData
   const recentTransactions = recentTransactionsData
 
-  const renderMissionCard = ({ item }: { item: Mission }) => (
-    <Pressable
-      onPress={() =>
-        navigation.navigate('MissionDetail' as any, { id: item.id })
-      }
-    >
-      <Stack
-        width={200}
-        backgroundColor="#ffffff"
-        borderRadius={16}
-        padding={16}
-        marginRight={12}
-        borderWidth={1}
-        borderColor="#f5f5f4"
+  const renderMissionCard = ({ item, index }: { item: Mission; index: number }) => (
+    <Animated.View entering={FadeInRight.delay(index * 100).duration(400)}>
+      <Pressable
+        onPress={() =>
+          navigation.navigate('MissionDetail' as any, { id: item.id })
+        }
       >
-        <Stack
-          width={40}
-          height={40}
-          borderRadius={12}
-          backgroundColor="#ecfdf5"
-          alignItems="center"
-          justifyContent="center"
-          marginBottom={12}
+        <Card
+          variant="elevated"
+          style={{ width: 200, marginRight: 12 }}
         >
-          <Target size={20} color="#059669" />
-        </Stack>
-        <Text
-          fontSize={14}
-          fontWeight="600"
-          color="#1c1917"
-          numberOfLines={1}
-        >
-          {item.name}
-        </Text>
-        <Text fontSize={12} color="#78716c" marginTop={4}>
-          {formatCompactCurrency(item.currentAmount)} /{' '}
-          {formatCompactCurrency(item.targetAmount)}
-        </Text>
+          <Stack padding={16}>
+            <Stack
+              width={44}
+              height={44}
+              borderRadius={14}
+              backgroundColor={`${colors.primary}15`}
+              alignItems="center"
+              justifyContent="center"
+              marginBottom={14}
+            >
+              <Target size={22} color={colors.primary} />
+            </Stack>
+            <Text
+              fontSize={15}
+              fontWeight="600"
+              color={colors.text}
+              numberOfLines={1}
+            >
+              {item.name}
+            </Text>
+            <Text fontSize={13} color={colors.textSecondary} marginTop={4}>
+              {formatCompactCurrency(item.currentAmount)} /{' '}
+              {formatCompactCurrency(item.targetAmount)}
+            </Text>
 
-        {/* Progress bar */}
-        <Stack
-          height={6}
-          borderRadius={3}
-          backgroundColor="#f5f5f4"
-          marginTop={12}
-          overflow="hidden"
-        >
-          <Stack
-            height={6}
-            borderRadius={3}
-            backgroundColor="#059669"
-            width={`${Math.min(item.progress, 100)}%` as any}
-          />
-        </Stack>
-        <Stack flexDirection="row" justifyContent="space-between" marginTop={6}>
-          <Text fontSize={11} color="#a8a29e">
-            {Math.round(item.progress)}%
-          </Text>
-          <Text fontSize={11} color="#a8a29e">
-            D-{item.daysRemaining}
-          </Text>
-        </Stack>
-      </Stack>
-    </Pressable>
+            <Stack marginTop={14}>
+              <CompactProgressBar progress={item.progress} />
+            </Stack>
+            <Stack flexDirection="row" justifyContent="space-between" marginTop={8}>
+              <Text fontSize={12} fontWeight="600" color={colors.primary}>
+                {Math.round(item.progress)}%
+              </Text>
+              <Text fontSize={12} color={colors.textTertiary}>
+                D-{item.daysRemaining}
+              </Text>
+            </Stack>
+          </Stack>
+        </Card>
+      </Pressable>
+    </Animated.View>
   )
 
   const renderTransactionItem = (transaction: Transaction) => {
@@ -134,38 +130,38 @@ export default function HomeScreen() {
         key={transaction.id}
         flexDirection="row"
         alignItems="center"
-        paddingVertical={12}
+        paddingVertical={14}
         borderBottomWidth={1}
-        borderBottomColor="#f5f5f4"
+        borderBottomColor={colors.border}
       >
         <Stack
-          width={40}
-          height={40}
-          borderRadius={20}
-          backgroundColor={isDeposit ? '#ecfdf5' : '#fff1f2'}
+          width={42}
+          height={42}
+          borderRadius={14}
+          backgroundColor={isDeposit ? `${colors.success}15` : `${colors.error}15`}
           alignItems="center"
           justifyContent="center"
         >
           {isDeposit ? (
-            <ArrowDownLeft size={18} color="#059669" />
+            <ArrowDownLeft size={20} color={colors.success} />
           ) : (
-            <ArrowUpRight size={18} color="#ef4444" />
+            <ArrowUpRight size={20} color={colors.error} />
           )}
         </Stack>
 
-        <Stack flex={1} marginLeft={12}>
-          <Text fontSize={14} fontWeight="500" color="#1c1917" numberOfLines={1}>
+        <Stack flex={1} marginLeft={14}>
+          <Text fontSize={15} fontWeight="500" color={colors.text} numberOfLines={1}>
             {transaction.description}
           </Text>
-          <Text fontSize={12} color="#a8a29e" marginTop={2}>
+          <Text fontSize={12} color={colors.textTertiary} marginTop={2}>
             {formatRelativeDate(transaction.transactionDate)}
           </Text>
         </Stack>
 
         <Text
-          fontSize={14}
-          fontWeight="600"
-          color={isDeposit ? '#059669' : '#ef4444'}
+          fontSize={15}
+          fontWeight="700"
+          color={isDeposit ? colors.success : colors.error}
         >
           {isDeposit ? '+' : '-'}
           {formatCurrency(transaction.amount)}
@@ -174,268 +170,330 @@ export default function HomeScreen() {
     )
   }
 
+  const progress = missionSummary?.monthlyProgress ?? 0
+
   return (
     <Screen edges={['top']}>
       <FlatList
         data={[]}
         renderItem={null}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#059669" />
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
         }
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         ListHeaderComponent={
           <Stack>
-            {/* Greeting */}
-            <Stack
-              flexDirection="row"
-              justifyContent="space-between"
-              alignItems="center"
-              paddingHorizontal={20}
-              paddingTop={16}
-              paddingBottom={8}
-            >
-              <Stack>
-                <Text fontSize={22} fontWeight="700" color="#1c1917">
-                  안녕하세요, {user?.name ?? ''}님
-                </Text>
-                <Text fontSize={13} color="#78716c" marginTop={4}>
-                  오늘도 목표를 향해 함께해요
-                </Text>
-              </Stack>
-
-              {/* Avatar */}
-              <Stack
-                width={44}
-                height={44}
-                borderRadius={22}
-                backgroundColor="#d1fae5"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Text fontSize={18} fontWeight="700" color="#059669">
-                  {user?.name?.charAt(0) ?? 'N'}
-                </Text>
-              </Stack>
-            </Stack>
-
-            {/* Total Savings Card */}
-            <Stack paddingHorizontal={20} marginTop={16}>
-              <Stack
-                backgroundColor="#059669"
-                borderRadius={20}
-                padding={24}
-                overflow="hidden"
-              >
-                <Text fontSize={13} color="#a7f3d0" fontWeight="500">
-                  총 저축액
-                </Text>
-                <Text
-                  fontSize={32}
-                  fontWeight="800"
-                  color="#ffffff"
-                  marginTop={8}
-                >
-                  {formatCurrency(missionSummary?.totalSavedAmount ?? 0)}
-                </Text>
-
-                <Stack flexDirection="row" gap={16} marginTop={16}>
-                  <Stack flex={1}>
-                    <Text fontSize={11} color="#a7f3d0">
-                      이번 달 목표
-                    </Text>
-                    <Text fontSize={15} fontWeight="600" color="#ffffff" marginTop={2}>
-                      {formatCompactCurrency(missionSummary?.monthlyTarget ?? 0)}
-                    </Text>
-                  </Stack>
-                  <Stack flex={1}>
-                    <Text fontSize={11} color="#a7f3d0">
-                      달성률
-                    </Text>
-                    <Text fontSize={15} fontWeight="600" color="#ffffff" marginTop={2}>
-                      {Math.round(missionSummary?.monthlyProgress ?? 0)}%
-                    </Text>
-                  </Stack>
-                </Stack>
-              </Stack>
-            </Stack>
-
-            {/* Quick Stats */}
-            <Stack
-              flexDirection="row"
-              paddingHorizontal={20}
-              gap={12}
-              marginTop={16}
-            >
-              <Stack
-                flex={1}
-                backgroundColor="#ffffff"
-                borderRadius={14}
-                padding={16}
-                alignItems="center"
-                borderWidth={1}
-                borderColor="#f5f5f4"
-              >
-                <Stack
-                  width={36}
-                  height={36}
-                  borderRadius={10}
-                  backgroundColor="#ecfdf5"
-                  alignItems="center"
-                  justifyContent="center"
-                  marginBottom={8}
-                >
-                  <Target size={18} color="#059669" />
-                </Stack>
-                <Text fontSize={20} fontWeight="700" color="#1c1917">
-                  {missionSummary?.activeMissions ?? 0}
-                </Text>
-                <Text fontSize={11} color="#78716c" marginTop={2}>
-                  진행 중 미션
-                </Text>
-              </Stack>
-
-              <Stack
-                flex={1}
-                backgroundColor="#ffffff"
-                borderRadius={14}
-                padding={16}
-                alignItems="center"
-                borderWidth={1}
-                borderColor="#f5f5f4"
-              >
-                <Stack
-                  width={36}
-                  height={36}
-                  borderRadius={10}
-                  backgroundColor="#eff6ff"
-                  alignItems="center"
-                  justifyContent="center"
-                  marginBottom={8}
-                >
-                  <CreditCard size={18} color="#3b82f6" />
-                </Stack>
-                <Text fontSize={20} fontWeight="700" color="#1c1917">
-                  {financeSummary?.connectedAccounts ?? 0}
-                </Text>
-                <Text fontSize={11} color="#78716c" marginTop={2}>
-                  연결 계좌
-                </Text>
-              </Stack>
-
-              <Stack
-                flex={1}
-                backgroundColor="#ffffff"
-                borderRadius={14}
-                padding={16}
-                alignItems="center"
-                borderWidth={1}
-                borderColor="#f5f5f4"
-              >
-                <Stack
-                  width={36}
-                  height={36}
-                  borderRadius={10}
-                  backgroundColor="#fef3c7"
-                  alignItems="center"
-                  justifyContent="center"
-                  marginBottom={8}
-                >
-                  <TrendingUp size={18} color="#f59e0b" />
-                </Stack>
-                <Text fontSize={20} fontWeight="700" color="#1c1917">
-                  {missionSummary?.completedMissions ?? 0}
-                </Text>
-                <Text fontSize={11} color="#78716c" marginTop={2}>
-                  완료 미션
-                </Text>
-              </Stack>
-            </Stack>
-
-            {/* Active Missions */}
-            {activeMissions.length > 0 && (
-              <Stack marginTop={24}>
-                <Stack
-                  flexDirection="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  paddingHorizontal={20}
-                  marginBottom={12}
-                >
-                  <Text fontSize={17} fontWeight="700" color="#1c1917">
-                    진행 중인 미션
-                  </Text>
-                  <Pressable
-                    onPress={() =>
-                      navigation.navigate('Missions' as any)
-                    }
-                  >
-                    <Stack flexDirection="row" alignItems="center">
-                      <Text fontSize={13} color="#059669">
-                        전체보기
-                      </Text>
-                      <ChevronRight size={16} color="#059669" />
-                    </Stack>
-                  </Pressable>
-                </Stack>
-
-                <FlatList
-                  data={activeMissions}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderMissionCard}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ paddingHorizontal: 20 }}
-                />
-              </Stack>
-            )}
-
-            {/* Recent Transactions */}
-            <Stack marginTop={24} paddingHorizontal={20}>
+            {/* Couple Profile Header */}
+            <Animated.View entering={FadeIn.duration(500)}>
               <Stack
                 flexDirection="row"
                 justifyContent="space-between"
                 alignItems="center"
-                marginBottom={8}
+                paddingHorizontal={20}
+                paddingTop={16}
+                paddingBottom={12}
               >
-                <Text fontSize={17} fontWeight="700" color="#1c1917">
-                  최근 거래
-                </Text>
-                <Pressable
-                  onPress={() =>
-                    navigation.navigate('TransactionList' as any, {})
-                  }
-                >
-                  <Stack flexDirection="row" alignItems="center">
-                    <Text fontSize={13} color="#059669">
-                      전체보기
+                <Stack flexDirection="row" alignItems="center" gap={12}>
+                  {/* User Avatar */}
+                  <Stack
+                    width={46}
+                    height={46}
+                    borderRadius={23}
+                    backgroundColor={`${colors.primary}20`}
+                    alignItems="center"
+                    justifyContent="center"
+                    borderWidth={2}
+                    borderColor={colors.primary}
+                  >
+                    <Text fontSize={18} fontWeight="700" color={colors.primary}>
+                      {user?.name?.charAt(0) ?? 'N'}
                     </Text>
-                    <ChevronRight size={16} color="#059669" />
+                  </Stack>
+
+                  {/* Partner Avatar */}
+                  {partner ? (
+                    <Stack
+                      width={46}
+                      height={46}
+                      borderRadius={23}
+                      backgroundColor={`${palette.secondary}20`}
+                      alignItems="center"
+                      justifyContent="center"
+                      borderWidth={2}
+                      borderColor={palette.secondary}
+                      marginLeft={-16}
+                    >
+                      <Text fontSize={18} fontWeight="700" color={palette.secondary}>
+                        {partner?.name?.charAt(0) ?? 'P'}
+                      </Text>
+                    </Stack>
+                  ) : (
+                    <Stack
+                      width={46}
+                      height={46}
+                      borderRadius={23}
+                      backgroundColor={colors.border}
+                      alignItems="center"
+                      justifyContent="center"
+                      borderWidth={2}
+                      borderColor={colors.border}
+                      marginLeft={-16}
+                    >
+                      <Users size={20} color={colors.textTertiary} />
+                    </Stack>
+                  )}
+
+                  <Stack marginLeft={4}>
+                    <Text fontSize={16} fontWeight="700" color={colors.text}>
+                      우리의 저축 여정
+                    </Text>
+                    <Text fontSize={12} color={colors.textSecondary} marginTop={2}>
+                      {user?.name ?? '사용자'}{partner ? ` & ${partner.name}` : ''}
+                    </Text>
+                  </Stack>
+                </Stack>
+
+                {/* Notification */}
+                <Pressable>
+                  <Stack
+                    width={44}
+                    height={44}
+                    borderRadius={14}
+                    backgroundColor={colors.card}
+                    alignItems="center"
+                    justifyContent="center"
+                    borderWidth={1}
+                    borderColor={colors.border}
+                  >
+                    <Bell size={22} color={colors.textSecondary} />
                   </Stack>
                 </Pressable>
               </Stack>
+            </Animated.View>
 
+            {/* Main Savings Card with Gradient */}
+            <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+              <Stack paddingHorizontal={20} marginTop={12}>
+                <Stack borderRadius={24} overflow="hidden">
+                  <LinearGradient
+                    colors={[...palette.gradient]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.gradientCard}
+                  >
+                    <Text fontSize={14} color="rgba(255,255,255,0.8)" fontWeight="500">
+                      이번 달 저축 현황
+                    </Text>
+                    <Text
+                      fontSize={36}
+                      fontWeight="800"
+                      color="#ffffff"
+                      marginTop={8}
+                    >
+                      {formatCurrency(missionSummary?.totalSavedAmount ?? 0)}
+                    </Text>
+
+                    {/* Progress Bar */}
+                    <Stack marginTop={20}>
+                      <Stack
+                        height={8}
+                        borderRadius={4}
+                        backgroundColor="rgba(255,255,255,0.3)"
+                        overflow="hidden"
+                      >
+                        <Stack
+                          height={8}
+                          borderRadius={4}
+                          backgroundColor="#ffffff"
+                          width={`${Math.min(progress, 100)}%`}
+                        />
+                      </Stack>
+                      <Stack flexDirection="row" justifyContent="space-between" marginTop={10}>
+                        <Text fontSize={13} color="rgba(255,255,255,0.8)">
+                          목표: {formatCompactCurrency(missionSummary?.monthlyTarget ?? 0)}
+                        </Text>
+                        <Text fontSize={14} fontWeight="700" color="#ffffff">
+                          {Math.round(progress)}%
+                        </Text>
+                      </Stack>
+                    </Stack>
+                  </LinearGradient>
+                </Stack>
+              </Stack>
+            </Animated.View>
+
+            {/* Quick Stats */}
+            <Animated.View entering={FadeInDown.delay(200).duration(500)}>
               <Stack
-                backgroundColor="#ffffff"
-                borderRadius={16}
-                paddingHorizontal={16}
-                borderWidth={1}
-                borderColor="#f5f5f4"
+                flexDirection="row"
+                paddingHorizontal={20}
+                gap={10}
+                marginTop={20}
               >
-                {recentTransactions.length > 0 ? (
-                  recentTransactions.map(renderTransactionItem)
-                ) : (
-                  <Stack paddingVertical={32} alignItems="center">
-                    <Text fontSize={14} color="#a8a29e">
-                      최근 거래 내역이 없습니다
+                <Card variant="default" style={{ flex: 1 }}>
+                  <Stack padding={14} alignItems="center">
+                    <Stack
+                      width={40}
+                      height={40}
+                      borderRadius={12}
+                      backgroundColor={`${colors.primary}15`}
+                      alignItems="center"
+                      justifyContent="center"
+                      marginBottom={10}
+                    >
+                      <Target size={20} color={colors.primary} />
+                    </Stack>
+                    <Text fontSize={22} fontWeight="800" color={colors.text}>
+                      {missionSummary?.activeMissions ?? 0}
+                    </Text>
+                    <Text fontSize={11} color={colors.textSecondary} marginTop={2}>
+                      진행 중
                     </Text>
                   </Stack>
-                )}
+                </Card>
+
+                <Card variant="default" style={{ flex: 1 }}>
+                  <Stack padding={14} alignItems="center">
+                    <Stack
+                      width={40}
+                      height={40}
+                      borderRadius={12}
+                      backgroundColor={`${colors.info}15`}
+                      alignItems="center"
+                      justifyContent="center"
+                      marginBottom={10}
+                    >
+                      <CreditCard size={20} color={colors.info} />
+                    </Stack>
+                    <Text fontSize={22} fontWeight="800" color={colors.text}>
+                      {financeSummary?.connectedAccounts ?? 0}
+                    </Text>
+                    <Text fontSize={11} color={colors.textSecondary} marginTop={2}>
+                      연결 계좌
+                    </Text>
+                  </Stack>
+                </Card>
+
+                <Card variant="default" style={{ flex: 1 }}>
+                  <Stack padding={14} alignItems="center">
+                    <Stack
+                      width={40}
+                      height={40}
+                      borderRadius={12}
+                      backgroundColor={`${colors.warning}15`}
+                      alignItems="center"
+                      justifyContent="center"
+                      marginBottom={10}
+                    >
+                      <TrendingUp size={20} color={colors.warning} />
+                    </Stack>
+                    <Text fontSize={22} fontWeight="800" color={colors.text}>
+                      {missionSummary?.completedMissions ?? 0}
+                    </Text>
+                    <Text fontSize={11} color={colors.textSecondary} marginTop={2}>
+                      완료
+                    </Text>
+                  </Stack>
+                </Card>
               </Stack>
-            </Stack>
+            </Animated.View>
+
+            {/* Active Missions */}
+            {activeMissions.length > 0 && (
+              <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+                <Stack marginTop={28}>
+                  <Stack
+                    flexDirection="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    paddingHorizontal={20}
+                    marginBottom={14}
+                  >
+                    <Text fontSize={18} fontWeight="700" color={colors.text}>
+                      진행 중인 미션
+                    </Text>
+                    <Pressable
+                      onPress={() =>
+                        navigation.navigate('Missions' as any)
+                      }
+                    >
+                      <Stack flexDirection="row" alignItems="center">
+                        <Text fontSize={14} fontWeight="500" color={colors.primary}>
+                          전체보기
+                        </Text>
+                        <ChevronRight size={18} color={colors.primary} />
+                      </Stack>
+                    </Pressable>
+                  </Stack>
+
+                  <FlatList
+                    data={activeMissions}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderMissionCard}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 20 }}
+                  />
+                </Stack>
+              </Animated.View>
+            )}
+
+            {/* Recent Transactions */}
+            <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+              <Stack marginTop={28} paddingHorizontal={20}>
+                <Stack
+                  flexDirection="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  marginBottom={14}
+                >
+                  <Text fontSize={18} fontWeight="700" color={colors.text}>
+                    최근 활동
+                  </Text>
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate('TransactionList' as any, {})
+                    }
+                  >
+                    <Stack flexDirection="row" alignItems="center">
+                      <Text fontSize={14} fontWeight="500" color={colors.primary}>
+                        전체보기
+                      </Text>
+                      <ChevronRight size={18} color={colors.primary} />
+                    </Stack>
+                  </Pressable>
+                </Stack>
+
+                <Card variant="default">
+                  <Stack paddingHorizontal={16}>
+                    {recentTransactions.length > 0 ? (
+                      recentTransactions.map(renderTransactionItem)
+                    ) : (
+                      <Stack paddingVertical={40} alignItems="center">
+                        <Text fontSize={14} color={colors.textTertiary}>
+                          최근 활동 내역이 없습니다
+                        </Text>
+                      </Stack>
+                    )}
+                  </Stack>
+                </Card>
+              </Stack>
+            </Animated.View>
           </Stack>
         }
       />
     </Screen>
   )
 }
+
+const styles = StyleSheet.create({
+  gradientCard: {
+    padding: 24,
+  },
+})
