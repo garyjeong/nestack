@@ -6,14 +6,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
-import { User, RefreshToken, EmailVerificationToken } from '../../database/entities';
-import { MailModule } from '../mail/mail.module';
+import { User, RefreshToken } from '../../database/entities';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken, EmailVerificationToken]),
-    MailModule,
+    TypeOrmModule.forFeature([User, RefreshToken]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -27,7 +24,7 @@ import { MailModule } from '../mail/mail.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtStrategy],
 })
 export class AuthModule {}

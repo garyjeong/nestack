@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "797307609398",
+    "project_id": "nestack-app",
+    "storage_bucket": "nestack-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:797307609398:android:placeholder",
+        "android_client_info": {
+          "package_name": "com.nestackmobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "797307609398-u3ubhn79ju5qgikf6eiv8ldm027pepmk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": ""
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "797307609398-u3ubhn79ju5qgikf6eiv8ldm027pepmk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
