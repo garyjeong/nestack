@@ -1,7 +1,73 @@
-import { createTamagui } from 'tamagui'
+import { createTamagui, createFont } from 'tamagui'
 import { createAnimations } from '@tamagui/animations-react-native'
 import { tokens } from './tokens'
 import { colors, themePalettes, type ThemeName } from './colors'
+
+// Pretendard 폰트 설정
+const pretendardFont = createFont({
+  family: 'Pretendard',
+  size: {
+    1: 11,
+    2: 12,
+    3: 13,
+    4: 14,
+    5: 15,
+    6: 16,
+    7: 18,
+    8: 20,
+    9: 22,
+    10: 24,
+    11: 28,
+    12: 32,
+    13: 36,
+    14: 40,
+    15: 48,
+    16: 56,
+    true: 14,
+  },
+  lineHeight: {
+    1: 16,
+    2: 18,
+    3: 20,
+    4: 22,
+    5: 24,
+    6: 26,
+    7: 28,
+    8: 30,
+    9: 32,
+    10: 36,
+    11: 40,
+    12: 44,
+    13: 48,
+    14: 52,
+    15: 60,
+    16: 68,
+    true: 22,
+  },
+  weight: {
+    4: '400', // Regular
+    5: '500', // Medium
+    6: '600', // SemiBold
+    7: '700', // Bold
+    8: '800', // ExtraBold (will use Bold)
+    true: '400',
+  },
+  letterSpacing: {
+    4: 0,
+    5: -0.2,
+    6: -0.3,
+    7: -0.4,
+    8: -0.5,
+    true: 0,
+  },
+  face: {
+    400: { normal: 'Pretendard-Regular' },
+    500: { normal: 'Pretendard-Medium' },
+    600: { normal: 'Pretendard-SemiBold' },
+    700: { normal: 'Pretendard-Bold' },
+    800: { normal: 'Pretendard-Bold' },
+  },
+})
 
 // 토스 스타일 애니메이션
 const animations = createAnimations({
@@ -187,6 +253,10 @@ const config = createTamagui({
   themes: allThemes,
   animations,
   defaultTheme: 'light',
+  fonts: {
+    heading: pretendardFont,
+    body: pretendardFont,
+  },
 })
 
 export type AppConfig = typeof config
