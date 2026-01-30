@@ -263,7 +263,7 @@ export default function FinanceScreen({ navigation }: Props) {
                           <Stack
                             width={48}
                             height={48}
-                            borderRadius={14}
+                            borderRadius={4}
                             backgroundColor={`${colors.info}15`}
                             alignItems="center"
                             justifyContent="center"

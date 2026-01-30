@@ -141,7 +141,7 @@ export default function MissionsScreen({ navigation }: Props) {
                 <Stack
                   width={48}
                   height={48}
-                  borderRadius={14}
+                  borderRadius={4}
                   backgroundColor={`${colors.primary}15`}
                   alignItems="center"
                   justifyContent="center"

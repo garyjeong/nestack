@@ -1,33 +1,41 @@
 {
   "project_info": {
-    "project_number": "797307609398",
-    "project_id": "nestack-app",
-    "storage_bucket": "nestack-app.appspot.com"
+    "project_number": "739566547309",
+    "project_id": "nestack-39c3d",
+    "storage_bucket": "nestack-39c3d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:797307609398:android:placeholder",
+        "mobilesdk_app_id": "1:739566547309:android:7b983d17fadf348509ea64",
         "android_client_info": {
           "package_name": "com.nestackmobile"
         }
       },
       "oauth_client": [
         {
-          "client_id": "797307609398-u3ubhn79ju5qgikf6eiv8ldm027pepmk.apps.googleusercontent.com",
+          "client_id": "739566547309-3cs7ttprik7vivhlf6erpjbonlnkfe07.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nestackmobile",
+            "certificate_hash": "ba04e6f552c8520cabe017e780229d42b7b66c2f"
+          }
+        },
+        {
+          "client_id": "739566547309-k8jdh55t8n0fmv8c1p64552l6fskb6pg.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": ""
+          "current_key": "AIzaSyDlXyQXSqFhNlrVggjFSv_FeOHH4SnInQM"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "797307609398-u3ubhn79ju5qgikf6eiv8ldm027pepmk.apps.googleusercontent.com",
+              "client_id": "739566547309-k8jdh55t8n0fmv8c1p64552l6fskb6pg.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

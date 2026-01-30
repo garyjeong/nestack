@@ -2,6 +2,7 @@ import React from 'react'
 import { ScrollView, RefreshControl, type ViewStyle } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Stack } from 'tamagui'
+import { useTheme } from '@/shared/hooks/useTheme'
 
 interface ScreenProps {
   children: React.ReactNode
@@ -18,12 +19,15 @@ export function Screen({
   scrollable = true,
   refreshing,
   onRefresh,
-  backgroundColor = '#fafaf9',
+  backgroundColor,
   edges = ['top'],
   contentContainerStyle,
 }: ScreenProps) {
+  const { colors } = useTheme()
+  const bgColor = backgroundColor ?? colors.background
+
   return (
-    <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor }}>
+    <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: bgColor }}>
       {scrollable ? (
         <ScrollView
           contentContainerStyle={[{ paddingHorizontal: 16, paddingBottom: 100 }, contentContainerStyle]}
@@ -33,8 +37,8 @@ export function Screen({
               <RefreshControl
                 refreshing={refreshing || false}
                 onRefresh={onRefresh}
-                tintColor="#059669"
-                colors={['#059669']}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
               />
             ) : undefined
           }

@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Button } from '../../shared/components/ui/Button'
 import { Screen } from '../../shared/components/layout/Screen'
+import { useTheme } from '../../shared/hooks/useTheme'
 import type { OnboardingStackParamList } from '../../app/navigation/types'
 import { useAuthStore } from '../../store/authStore'
 import { Users, UserPlus, Heart } from 'lucide-react-native'
@@ -12,6 +13,7 @@ import Toast from 'react-native-toast-message'
 type Props = NativeStackScreenProps<OnboardingStackParamList, 'Welcome'>
 
 export default function WelcomeScreen({ navigation }: Props) {
+  const { colors } = useTheme()
   const user = useAuthStore((state) => state.user)
 
   const { mutate: createFamily, isPending } = useMutation({
@@ -49,20 +51,20 @@ export default function WelcomeScreen({ navigation }: Props) {
             width={120}
             height={120}
             borderRadius={60}
-            backgroundColor="#ecfdf5"
+            backgroundColor={`${colors.primary}15`}
             alignItems="center"
             justifyContent="center"
             marginBottom={24}
           >
-            <Heart size={56} color="#059669" />
+            <Heart size={56} color={colors.primary} />
           </Stack>
 
-          <Text fontSize={28} fontWeight="800" color="#1c1917" textAlign="center">
+          <Text fontSize={28} fontWeight="800" color={colors.text} textAlign="center">
             환영합니다{user?.name ? `, ${user.name}님` : ''}!
           </Text>
           <Text
             fontSize={15}
-            color="#78716c"
+            color={colors.textSecondary}
             textAlign="center"
             marginTop={12}
             lineHeight={24}
@@ -98,8 +100,8 @@ export default function WelcomeScreen({ navigation }: Props) {
             size="lg"
           >
             <Stack flexDirection="row" alignItems="center" gap={8}>
-              <UserPlus size={20} color="#059669" />
-              <Text fontSize={16} fontWeight="600" color="#059669">
+              <UserPlus size={20} color={colors.primary} />
+              <Text fontSize={16} fontWeight="600" color={colors.primary}>
                 초대코드로 참여하기
               </Text>
             </Stack>
@@ -109,7 +111,7 @@ export default function WelcomeScreen({ navigation }: Props) {
         {/* Help text */}
         <Text
           fontSize={12}
-          color="#a8a29e"
+          color={colors.textTertiary}
           textAlign="center"
           marginTop={32}
           lineHeight={20}

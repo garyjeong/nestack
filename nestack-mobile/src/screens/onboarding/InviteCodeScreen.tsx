@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Button } from '../../shared/components/ui/Button'
 import { Screen } from '../../shared/components/layout/Screen'
+import { useTheme } from '../../shared/hooks/useTheme'
 import type { OnboardingStackParamList } from '../../app/navigation/types'
 import { ArrowLeft, TicketCheck } from 'lucide-react-native'
 import Toast from 'react-native-toast-message'
@@ -15,6 +16,7 @@ const CODE_LENGTH = 12 // XXXX-XXXX-XXXX = 12 chars without dashes
 const SEGMENT_LENGTH = 4
 
 export default function InviteCodeScreen({ navigation, route }: Props) {
+  const { colors } = useTheme()
   const initialCode = route.params?.code ?? ''
   const [codeSegments, setCodeSegments] = useState<string[]>(() => {
     const cleaned = initialCode.replace(/-/g, '').toUpperCase()
@@ -100,9 +102,9 @@ export default function InviteCodeScreen({ navigation, route }: Props) {
           paddingVertical={12}
         >
           <Pressable onPress={() => navigation.goBack()}>
-            <ArrowLeft size={24} color="#1c1917" />
+            <ArrowLeft size={24} color={colors.text} />
           </Pressable>
-          <Text fontSize={18} fontWeight="700" color="#1c1917" marginLeft={12}>
+          <Text fontSize={18} fontWeight="700" color={colors.text} marginLeft={12}>
             초대코드 입력
           </Text>
         </Stack>
@@ -113,20 +115,20 @@ export default function InviteCodeScreen({ navigation, route }: Props) {
             <Stack
               width={80}
               height={80}
-              borderRadius={40}
-              backgroundColor="#ecfdf5"
+              borderRadius={4}
+              backgroundColor={`${colors.primary}15`}
               alignItems="center"
               justifyContent="center"
               marginBottom={16}
             >
-              <TicketCheck size={40} color="#059669" />
+              <TicketCheck size={40} color={colors.primary} />
             </Stack>
-            <Text fontSize={16} fontWeight="600" color="#1c1917" textAlign="center">
+            <Text fontSize={16} fontWeight="600" color={colors.text} textAlign="center">
               초대코드를 입력해주세요
             </Text>
             <Text
               fontSize={14}
-              color="#78716c"
+              color={colors.textSecondary}
               textAlign="center"
               marginTop={8}
               lineHeight={22}
@@ -155,19 +157,19 @@ export default function InviteCodeScreen({ navigation, route }: Props) {
                     borderWidth: 1.5,
                     borderColor:
                       codeSegments[index].length === SEGMENT_LENGTH
-                        ? '#059669'
-                        : '#d6d3d1',
-                    borderRadius: 12,
+                        ? colors.primary
+                        : colors.border,
+                    borderRadius: 4,
                     fontSize: 18,
                     fontWeight: '700',
                     textAlign: 'center',
-                    color: '#1c1917',
-                    backgroundColor: '#ffffff',
+                    color: colors.text,
+                    backgroundColor: colors.card,
                     letterSpacing: 2,
                   }}
                 />
                 {index < 2 && (
-                  <Text fontSize={20} fontWeight="700" color="#d6d3d1">
+                  <Text fontSize={20} fontWeight="700" color={colors.border}>
                     -
                   </Text>
                 )}
@@ -191,7 +193,7 @@ export default function InviteCodeScreen({ navigation, route }: Props) {
           {/* Help */}
           <Text
             fontSize={12}
-            color="#a8a29e"
+            color={colors.textTertiary}
             textAlign="center"
             marginTop={24}
             lineHeight={20}

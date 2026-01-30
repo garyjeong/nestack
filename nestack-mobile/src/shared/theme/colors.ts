@@ -10,13 +10,13 @@ export const themePalettes = {
     gradient: ['#0066FF', '#00D4AA'],
   },
   forest: {
-    primary: '#10B981',
-    primaryLight: '#34D399',
-    primaryDark: '#059669',
-    secondary: '#34D399',
-    secondaryLight: '#6EE7B7',
-    secondaryDark: '#10B981',
-    gradient: ['#10B981', '#34D399'],
+    primary: '#228B22',
+    primaryLight: '#2E9E2E',
+    primaryDark: '#1A6B1A',
+    secondary: '#86EFAC',
+    secondaryLight: '#A7F3C9',
+    secondaryDark: '#6EE7A6',
+    gradient: ['#228B22', '#86EFAC'],
   },
   sunset: {
     primary: '#F97316',
@@ -50,7 +50,7 @@ export const themePalettes = {
 export type ThemeName = keyof typeof themePalettes
 
 // 기본 테마
-export const DEFAULT_THEME: ThemeName = 'ocean'
+export const DEFAULT_THEME: ThemeName = 'forest'
 
 // 기존 색상 (공통)
 export const colors = {

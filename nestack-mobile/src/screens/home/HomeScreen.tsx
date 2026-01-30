@@ -85,7 +85,7 @@ export default function HomeScreen() {
             <Stack
               width={44}
               height={44}
-              borderRadius={14}
+              borderRadius={4}
               backgroundColor={`${colors.primary}15`}
               alignItems="center"
               justifyContent="center"
@@ -137,7 +137,7 @@ export default function HomeScreen() {
         <Stack
           width={42}
           height={42}
-          borderRadius={14}
+          borderRadius={4}
           backgroundColor={isDeposit ? `${colors.success}15` : `${colors.error}15`}
           alignItems="center"
           justifyContent="center"
@@ -264,7 +264,7 @@ export default function HomeScreen() {
                   <Stack
                     width={44}
                     height={44}
-                    borderRadius={14}
+                    borderRadius={4}
                     backgroundColor={colors.card}
                     alignItems="center"
                     justifyContent="center"
@@ -341,7 +341,7 @@ export default function HomeScreen() {
                     <Stack
                       width={40}
                       height={40}
-                      borderRadius={12}
+                      borderRadius={4}
                       backgroundColor={`${colors.primary}15`}
                       alignItems="center"
                       justifyContent="center"
@@ -363,7 +363,7 @@ export default function HomeScreen() {
                     <Stack
                       width={40}
                       height={40}
-                      borderRadius={12}
+                      borderRadius={4}
                       backgroundColor={`${colors.info}15`}
                       alignItems="center"
                       justifyContent="center"
@@ -385,7 +385,7 @@ export default function HomeScreen() {
                     <Stack
                       width={40}
                       height={40}
-                      borderRadius={12}
+                      borderRadius={4}
                       backgroundColor={`${colors.warning}15`}
                       alignItems="center"
                       justifyContent="center"

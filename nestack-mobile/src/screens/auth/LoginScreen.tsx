@@ -77,7 +77,7 @@ export default function LoginScreen() {
                   gap={12}
                   height={56}
                   backgroundColor={colors.card}
-                  borderRadius={14}
+                  borderRadius={4}
                   borderWidth={1}
                   borderColor={colors.border}
                   shadowColor="rgba(0,0,0,0.08)"

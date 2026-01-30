@@ -11,7 +11,7 @@ import Toast from 'react-native-toast-message'
 
 // Google Web Client ID - ID 토큰 발급을 위해 필요
 // Google Cloud Console에서 Web Application 타입으로 생성된 Client ID를 사용
-const WEB_CLIENT_ID = '797307609398-u3ubhn79ju5qgikf6eiv8ldm027pepmk.apps.googleusercontent.com'
+const WEB_CLIENT_ID = '739566547309-k8jdh55t8n0fmv8c1p64552l6fskb6pg.apps.googleusercontent.com'
 
 export function useGoogleLogin() {
   const [isLoading, setIsLoading] = useState(false)

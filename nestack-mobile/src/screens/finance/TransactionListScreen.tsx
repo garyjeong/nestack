@@ -118,7 +118,7 @@ export default function TransactionListScreen({ navigation, route }: Props) {
           <Stack
             width={44}
             height={44}
-            borderRadius={14}
+            borderRadius={4}
             backgroundColor={bgColor}
             alignItems="center"
             justifyContent="center"

@@ -3,6 +3,7 @@ import { FlatList, Pressable } from 'react-native'
 import { Stack, Text } from 'tamagui'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Screen } from '../../shared/components/layout/Screen'
+import { useTheme } from '../../shared/hooks/useTheme'
 import { useBadges } from '../../features/badge/hooks'
 import type { Badge, UserBadge } from '../../features/badge/types'
 import type { MyPageStackParamList } from '../../app/navigation/types'
@@ -33,6 +34,7 @@ function toDisplayBadges(
 }
 
 export default function BadgesScreen({ navigation }: Props) {
+  const { colors } = useTheme()
   const { earnedBadges, availableBadges, totalEarned } = useBadges()
 
   const badges = toDisplayBadges(earnedBadges, availableBadges)
@@ -47,34 +49,34 @@ export default function BadgesScreen({ navigation }: Props) {
         padding={6}
       >
         <Stack
-          backgroundColor="#ffffff"
-          borderRadius={16}
+          backgroundColor={colors.card}
+          borderRadius={4}
           padding={16}
           alignItems="center"
           borderWidth={1}
-          borderColor={isEarned ? '#fef3c7' : '#f5f5f4'}
+          borderColor={isEarned ? `${colors.warning}30` : colors.border}
           opacity={isEarned ? 1 : 0.6}
         >
           <Stack
             width={64}
             height={64}
-            borderRadius={32}
-            backgroundColor={isEarned ? '#fef3c7' : '#f5f5f4'}
+            borderRadius={4}
+            backgroundColor={isEarned ? `${colors.warning}20` : colors.backgroundSecondary}
             alignItems="center"
             justifyContent="center"
             marginBottom={12}
           >
             {isEarned ? (
-              <Award size={32} color="#f59e0b" />
+              <Award size={32} color={colors.warning} />
             ) : (
-              <Lock size={24} color="#a8a29e" />
+              <Lock size={24} color={colors.textTertiary} />
             )}
           </Stack>
 
           <Text
             fontSize={14}
             fontWeight="600"
-            color={isEarned ? '#1c1917' : '#a8a29e'}
+            color={isEarned ? colors.text : colors.textTertiary}
             textAlign="center"
             numberOfLines={2}
           >
@@ -83,7 +85,7 @@ export default function BadgesScreen({ navigation }: Props) {
 
           <Text
             fontSize={12}
-            color="#78716c"
+            color={colors.textSecondary}
             textAlign="center"
             marginTop={4}
             numberOfLines={2}
@@ -93,7 +95,7 @@ export default function BadgesScreen({ navigation }: Props) {
           </Text>
 
           {isEarned && item.earnedAt && (
-            <Text fontSize={10} color="#a8a29e" marginTop={8}>
+            <Text fontSize={10} color={colors.textTertiary} marginTop={8}>
               획득: {new Date(item.earnedAt).toLocaleDateString('ko-KR')}
             </Text>
           )}
@@ -112,9 +114,9 @@ export default function BadgesScreen({ navigation }: Props) {
         paddingVertical={12}
       >
         <Pressable onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color="#1c1917" />
+          <ArrowLeft size={24} color={colors.text} />
         </Pressable>
-        <Text fontSize={18} fontWeight="700" color="#1c1917" marginLeft={12}>
+        <Text fontSize={18} fontWeight="700" color={colors.text} marginLeft={12}>
           배지
         </Text>
       </Stack>
@@ -128,29 +130,29 @@ export default function BadgesScreen({ navigation }: Props) {
       >
         <Stack
           flex={1}
-          backgroundColor="#fef3c7"
-          borderRadius={12}
+          backgroundColor={`${colors.warning}20`}
+          borderRadius={4}
           padding={14}
           alignItems="center"
         >
-          <Text fontSize={24} fontWeight="800" color="#f59e0b">
+          <Text fontSize={24} fontWeight="800" color={colors.warning}>
             {earnedCount}
           </Text>
-          <Text fontSize={12} color="#92400e" marginTop={2}>
+          <Text fontSize={12} color={colors.warning} marginTop={2}>
             획득한 배지
           </Text>
         </Stack>
         <Stack
           flex={1}
-          backgroundColor="#f5f5f4"
-          borderRadius={12}
+          backgroundColor={colors.backgroundSecondary}
+          borderRadius={4}
           padding={14}
           alignItems="center"
         >
-          <Text fontSize={24} fontWeight="800" color="#78716c">
+          <Text fontSize={24} fontWeight="800" color={colors.textSecondary}>
             {badges.length - earnedCount}
           </Text>
-          <Text fontSize={12} color="#78716c" marginTop={2}>
+          <Text fontSize={12} color={colors.textSecondary} marginTop={2}>
             미획득 배지
           </Text>
         </Stack>
@@ -169,18 +171,18 @@ export default function BadgesScreen({ navigation }: Props) {
             <Stack
               width={64}
               height={64}
-              borderRadius={32}
-              backgroundColor="#f5f5f4"
+              borderRadius={4}
+              backgroundColor={colors.backgroundSecondary}
               alignItems="center"
               justifyContent="center"
               marginBottom={12}
             >
-              <Award size={28} color="#a8a29e" />
+              <Award size={28} color={colors.textTertiary} />
             </Stack>
-            <Text fontSize={14} color="#78716c">
+            <Text fontSize={14} color={colors.textSecondary}>
               배지가 아직 없습니다
             </Text>
-            <Text fontSize={12} color="#a8a29e" marginTop={4}>
+            <Text fontSize={12} color={colors.textTertiary} marginTop={4}>
               미션을 완료하여 배지를 획득하세요
             </Text>
           </Stack>

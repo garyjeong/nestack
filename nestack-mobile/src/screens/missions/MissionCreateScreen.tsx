@@ -8,6 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Button } from '../../shared/components/ui/Button'
 import { Input } from '../../shared/components/ui/Input'
 import { Screen } from '../../shared/components/layout/Screen'
+import { useTheme } from '../../shared/hooks/useTheme'
 import {
   useLifeCycleCategories,
   useMissionTemplates,
@@ -47,6 +48,7 @@ const missionSchema = z.object({
 type MissionForm = z.infer<typeof missionSchema>
 
 export default function MissionCreateScreen({ navigation, route }: Props) {
+  const { colors } = useTheme()
   const initialCategoryId = route.params?.categoryId
   const initialTemplateId = route.params?.templateId
 
@@ -150,9 +152,9 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
             }
           }}
         >
-          <ArrowLeft size={24} color="#1c1917" />
+          <ArrowLeft size={24} color={colors.text} />
         </Pressable>
-        <Text fontSize={18} fontWeight="700" color="#1c1917" marginLeft={12}>
+        <Text fontSize={18} fontWeight="700" color={colors.text} marginLeft={12}>
           {getStepTitle()}
         </Text>
       </Stack>
@@ -163,39 +165,39 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 20, gap: 12 }}
         >
-          <Text fontSize={15} color="#78716c" marginBottom={8}>
+          <Text fontSize={15} color={colors.textSecondary} marginBottom={8}>
             미션의 라이프사이클 카테고리를 선택하세요
           </Text>
           {(categories ?? []).map((category) => (
             <Pressable key={category.id} onPress={() => handleSelectCategory(category)}>
               <Stack
-                backgroundColor="#ffffff"
-                borderRadius={14}
+                backgroundColor={colors.card}
+                borderRadius={4}
                 padding={16}
                 borderWidth={1}
-                borderColor={selectedCategoryId === category.id ? '#059669' : '#f5f5f4'}
+                borderColor={selectedCategoryId === category.id ? colors.primary : colors.border}
                 flexDirection="row"
                 alignItems="center"
               >
                 <Stack
                   width={44}
                   height={44}
-                  borderRadius={12}
-                  backgroundColor="#ecfdf5"
+                  borderRadius={4}
+                  backgroundColor={`${colors.primary}15`}
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <Target size={22} color="#059669" />
+                  <Target size={22} color={colors.primary} />
                 </Stack>
                 <Stack flex={1} marginLeft={12}>
-                  <Text fontSize={15} fontWeight="600" color="#1c1917">
+                  <Text fontSize={15} fontWeight="600" color={colors.text}>
                     {category.name}
                   </Text>
-                  <Text fontSize={12} color="#78716c" marginTop={2} numberOfLines={2}>
+                  <Text fontSize={12} color={colors.textSecondary} marginTop={2} numberOfLines={2}>
                     {category.description}
                   </Text>
                 </Stack>
-                <ChevronRight size={20} color="#d6d3d1" />
+                <ChevronRight size={20} color={colors.border} />
               </Stack>
             </Pressable>
           ))}
@@ -208,18 +210,18 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: 20, gap: 12 }}
         >
-          <Text fontSize={15} color="#78716c" marginBottom={8}>
+          <Text fontSize={15} color={colors.textSecondary} marginBottom={8}>
             추천 템플릿을 선택하거나 직접 만들 수 있습니다
           </Text>
 
           {/* Custom option */}
           <Pressable onPress={handleSkipTemplate}>
             <Stack
-              backgroundColor="#ffffff"
-              borderRadius={14}
+              backgroundColor={colors.card}
+              borderRadius={4}
               padding={16}
               borderWidth={1}
-              borderColor="#e7e5e4"
+              borderColor={colors.border}
               borderStyle="dashed"
               flexDirection="row"
               alignItems="center"
@@ -227,22 +229,22 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
               <Stack
                 width={44}
                 height={44}
-                borderRadius={12}
-                backgroundColor="#f5f5f4"
+                borderRadius={4}
+                backgroundColor={colors.backgroundSecondary}
                 alignItems="center"
                 justifyContent="center"
               >
-                <Target size={22} color="#78716c" />
+                <Target size={22} color={colors.textSecondary} />
               </Stack>
               <Stack flex={1} marginLeft={12}>
-                <Text fontSize={15} fontWeight="600" color="#1c1917">
+                <Text fontSize={15} fontWeight="600" color={colors.text}>
                   직접 만들기
                 </Text>
-                <Text fontSize={12} color="#78716c" marginTop={2}>
+                <Text fontSize={12} color={colors.textSecondary} marginTop={2}>
                   나만의 미션을 직접 설정하세요
                 </Text>
               </Stack>
-              <ChevronRight size={20} color="#d6d3d1" />
+              <ChevronRight size={20} color={colors.border} />
             </Stack>
           </Pressable>
 
@@ -250,33 +252,33 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
           {(templates ?? []).map((template) => (
             <Pressable key={template.id} onPress={() => handleSelectTemplate(template)}>
               <Stack
-                backgroundColor="#ffffff"
-                borderRadius={14}
+                backgroundColor={colors.card}
+                borderRadius={4}
                 padding={16}
                 borderWidth={1}
-                borderColor="#f5f5f4"
+                borderColor={colors.border}
                 flexDirection="row"
                 alignItems="center"
               >
                 <Stack
                   width={44}
                   height={44}
-                  borderRadius={12}
-                  backgroundColor="#ecfdf5"
+                  borderRadius={4}
+                  backgroundColor={`${colors.primary}15`}
                   alignItems="center"
                   justifyContent="center"
                 >
-                  <Target size={22} color="#059669" />
+                  <Target size={22} color={colors.primary} />
                 </Stack>
                 <Stack flex={1} marginLeft={12}>
-                  <Text fontSize={15} fontWeight="600" color="#1c1917">
+                  <Text fontSize={15} fontWeight="600" color={colors.text}>
                     {template.name}
                   </Text>
-                  <Text fontSize={12} color="#78716c" marginTop={2} numberOfLines={1}>
+                  <Text fontSize={12} color={colors.textSecondary} marginTop={2} numberOfLines={1}>
                     목표: {formatCurrency(template.defaultTargetAmount)} / {template.defaultDuration}일
                   </Text>
                 </Stack>
-                <ChevronRight size={20} color="#d6d3d1" />
+                <ChevronRight size={20} color={colors.border} />
               </Stack>
             </Pressable>
           ))}
@@ -296,7 +298,7 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
           >
             {/* Mission Type */}
             <Stack gap={8}>
-              <Text fontSize={14} fontWeight="600" color="#1c1917">
+              <Text fontSize={14} fontWeight="600" color={colors.text}>
                 미션 유형
               </Text>
               <Stack flexDirection="row" flexWrap="wrap" gap={8}>
@@ -307,10 +309,10 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
                       <Stack
                         paddingHorizontal={14}
                         paddingVertical={8}
-                        borderRadius={8}
-                        backgroundColor={isActive ? '#059669' : '#ffffff'}
+                        borderRadius={4}
+                        backgroundColor={isActive ? colors.primary : colors.card}
                         borderWidth={1}
-                        borderColor={isActive ? '#059669' : '#e7e5e4'}
+                        borderColor={isActive ? colors.primary : colors.border}
                         flexDirection="row"
                         alignItems="center"
                         gap={4}
@@ -319,7 +321,7 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
                         <Text
                           fontSize={13}
                           fontWeight="500"
-                          color={isActive ? '#ffffff' : '#57534e'}
+                          color={isActive ? '#ffffff' : colors.textSecondary}
                         >
                           {type.label}
                         </Text>
@@ -341,7 +343,7 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
                   value={value}
                   onChangeText={onChange}
                   onBlur={onBlur}
-                  leftIcon={<Target size={20} color="#a8a29e" />}
+                  leftIcon={<Target size={20} color={colors.textTertiary} />}
                   error={errors.name?.message}
                 />
               )}
@@ -376,7 +378,7 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
                   onChangeText={onChange}
                   onBlur={onBlur}
                   keyboardType="numeric"
-                  leftIcon={<DollarSign size={20} color="#a8a29e" />}
+                  leftIcon={<DollarSign size={20} color={colors.textTertiary} />}
                   error={errors.targetAmount?.message}
                 />
               )}
@@ -392,7 +394,7 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
                   placeholder="YYYY-MM-DD"
                   value={value}
                   onChangeText={onChange}
-                  leftIcon={<Calendar size={20} color="#a8a29e" />}
+                  leftIcon={<Calendar size={20} color={colors.textTertiary} />}
                   error={errors.startDate?.message}
                 />
               )}
@@ -408,7 +410,7 @@ export default function MissionCreateScreen({ navigation, route }: Props) {
                   placeholder="YYYY-MM-DD"
                   value={value}
                   onChangeText={onChange}
-                  leftIcon={<Calendar size={20} color="#a8a29e" />}
+                  leftIcon={<Calendar size={20} color={colors.textTertiary} />}
                   error={errors.endDate?.message}
                 />
               )}

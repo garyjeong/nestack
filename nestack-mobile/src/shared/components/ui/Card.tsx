@@ -27,7 +27,7 @@ export function Card({
   const getVariantStyle = useCallback(() => {
     const baseStyle = {
       backgroundColor: colors.card,
-      borderRadius: 20,
+      borderRadius: 4,
     }
 
     switch (variant) {

@@ -3,6 +3,7 @@ import { FlatList, Pressable, RefreshControl, ActivityIndicator } from 'react-na
 import { Stack, Text } from 'tamagui'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import { Screen } from '../../shared/components/layout/Screen'
+import { useTheme } from '../../shared/hooks/useTheme'
 import { useAccount, useAccountTransactions, useAccountMutations } from '../../features/finance/hooks'
 import { formatCurrency, formatCompactCurrency, formatDate } from '../../shared/utils/format'
 import type { Transaction } from '../../features/finance/types'
@@ -18,6 +19,7 @@ import {
 type Props = NativeStackScreenProps<FinanceStackParamList, 'AccountDetail'>
 
 export default function AccountDetailScreen({ navigation, route }: Props) {
+  const { colors } = useTheme()
   const { id } = route.params
 
   const {
@@ -44,7 +46,7 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
     return (
       <Screen edges={['top']}>
         <Stack flex={1} justifyContent="center" alignItems="center">
-          <ActivityIndicator size="large" color="#059669" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </Stack>
       </Screen>
     )
@@ -59,28 +61,28 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
         paddingVertical={14}
         paddingHorizontal={20}
         borderBottomWidth={1}
-        borderBottomColor="#f5f5f4"
+        borderBottomColor={colors.border}
       >
         <Stack
           width={40}
           height={40}
-          borderRadius={20}
-          backgroundColor={isDeposit ? '#ecfdf5' : '#fff1f2'}
+          borderRadius={4}
+          backgroundColor={isDeposit ? `${colors.success}15` : `${colors.error}15`}
           alignItems="center"
           justifyContent="center"
         >
           {isDeposit ? (
-            <ArrowDownLeft size={18} color="#059669" />
+            <ArrowDownLeft size={18} color={colors.success} />
           ) : (
-            <ArrowUpRight size={18} color="#ef4444" />
+            <ArrowUpRight size={18} color={colors.error} />
           )}
         </Stack>
 
         <Stack flex={1} marginLeft={12}>
-          <Text fontSize={14} fontWeight="500" color="#1c1917" numberOfLines={1}>
+          <Text fontSize={14} fontWeight="500" color={colors.text} numberOfLines={1}>
             {item.description}
           </Text>
-          <Text fontSize={12} color="#a8a29e" marginTop={2}>
+          <Text fontSize={12} color={colors.textTertiary} marginTop={2}>
             {formatDate(item.transactionDate)}
           </Text>
         </Stack>
@@ -89,11 +91,11 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
           <Text
             fontSize={14}
             fontWeight="600"
-            color={isDeposit ? '#059669' : '#ef4444'}
+            color={isDeposit ? colors.success : colors.error}
           >
             {isDeposit ? '+' : '-'}{formatCurrency(item.amount)}
           </Text>
-          <Text fontSize={11} color="#a8a29e" marginTop={2}>
+          <Text fontSize={11} color={colors.textTertiary} marginTop={2}>
             잔액 {formatCompactCurrency(item.balance)}
           </Text>
         </Stack>
@@ -112,15 +114,15 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
         paddingVertical={12}
       >
         <Pressable onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color="#1c1917" />
+          <ArrowLeft size={24} color={colors.text} />
         </Pressable>
-        <Text fontSize={18} fontWeight="700" color="#1c1917">
+        <Text fontSize={18} fontWeight="700" color={colors.text}>
           계좌 상세
         </Text>
         <Pressable onPress={() => syncAccount({ id })}>
           <RefreshCw
             size={22}
-            color="#059669"
+            color={colors.primary}
             style={isSyncing ? { opacity: 0.5 } : undefined}
           />
         </Pressable>
@@ -129,44 +131,44 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
       {/* Account Info Card */}
       <Stack paddingHorizontal={20} marginBottom={16}>
         <Stack
-          backgroundColor="#ffffff"
-          borderRadius={16}
+          backgroundColor={colors.card}
+          borderRadius={4}
           padding={20}
           borderWidth={1}
-          borderColor="#f5f5f4"
+          borderColor={colors.border}
         >
           <Stack flexDirection="row" alignItems="center" gap={12}>
             <Stack
               width={48}
               height={48}
-              borderRadius={14}
-              backgroundColor="#eff6ff"
+              borderRadius={4}
+              backgroundColor={`${colors.info}15`}
               alignItems="center"
               justifyContent="center"
             >
-              <Landmark size={24} color="#3b82f6" />
+              <Landmark size={24} color={colors.info} />
             </Stack>
             <Stack flex={1}>
-              <Text fontSize={16} fontWeight="700" color="#1c1917">
+              <Text fontSize={16} fontWeight="700" color={colors.text}>
                 {account.accountAlias ?? account.bankName}
               </Text>
-              <Text fontSize={13} color="#78716c" marginTop={2}>
+              <Text fontSize={13} color={colors.textSecondary} marginTop={2}>
                 {account.bankName} {account.accountNumber}
               </Text>
             </Stack>
           </Stack>
 
           <Stack marginTop={16}>
-            <Text fontSize={12} color="#a8a29e">
+            <Text fontSize={12} color={colors.textTertiary}>
               잔액
             </Text>
-            <Text fontSize={28} fontWeight="800" color="#1c1917" marginTop={4}>
+            <Text fontSize={28} fontWeight="800" color={colors.text} marginTop={4}>
               {formatCurrency(account.balance)}
             </Text>
           </Stack>
 
           {account.lastSyncedAt && (
-            <Text fontSize={11} color="#a8a29e" marginTop={8}>
+            <Text fontSize={11} color={colors.textTertiary} marginTop={8}>
               마지막 동기화: {formatDate(account.lastSyncedAt)}
             </Text>
           )}
@@ -181,10 +183,10 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
         paddingHorizontal={20}
         marginBottom={8}
       >
-        <Text fontSize={17} fontWeight="700" color="#1c1917">
+        <Text fontSize={17} fontWeight="700" color={colors.text}>
           거래 내역
         </Text>
-        <Text fontSize={12} color="#a8a29e">
+        <Text fontSize={12} color={colors.textTertiary}>
           {transactions.length}건
         </Text>
       </Stack>
@@ -196,11 +198,11 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#059669" />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
         ListEmptyComponent={
           <Stack paddingVertical={40} alignItems="center">
-            <Text fontSize={14} color="#a8a29e">
+            <Text fontSize={14} color={colors.textTertiary}>
               거래 내역이 없습니다
             </Text>
           </Stack>

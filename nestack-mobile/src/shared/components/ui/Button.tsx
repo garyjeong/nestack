@@ -162,7 +162,7 @@ export function Button({
         borderWidth={v.borderWidth}
         height={s.height}
         paddingHorizontal={s.paddingHorizontal}
-        borderRadius={14}
+        borderRadius={4}
         flexDirection="row"
         alignItems="center"
         justifyContent="center"
